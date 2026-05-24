@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#7A2E5A">
+<meta name="description" content="Дневник симптомов Lira: отмечай самочувствие каждый день, смотри тренды за 30/90 дней.">
+<meta name="robots" content="noindex,nofollow">
+<title>Дневник симптомов — Lira</title>
+<link rel="stylesheet" href="/legal/style.css">
+<link rel="icon" href="/favicon.ico">
+<style>
+  /* Page-specific styles layered on top of the shared legal stylesheet. */
+  .diary-intro {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin: 0 0 24px;
+    font-size: 14px;
+    color: var(--text-soft);
+    line-height: 1.55;
+  }
+  .diary-intro b { color: var(--text); }
+
+  .diary-form {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    margin: 0 0 24px;
+  }
+  .diary-form .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  .diary-form label {
+    display: flex; flex-direction: column; gap: 6px;
+    font-size: 13px; color: var(--muted); flex: 1 1 140px;
+  }
+  .diary-form input[type="date"],
+  .diary-form select,
+  .diary-form input[type="text"] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 15px;
+    color: var(--text);
+    font-family: inherit;
+  }
+  .diary-form .intensity {
+    flex-basis: 100%;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; color: var(--text-soft);
+  }
+  .diary-form .intensity input { flex: 1; }
+  .diary-form .intensity .value {
+    display: inline-block; min-width: 1.5em; text-align: center;
+    font-weight: 600; color: var(--text);
+  }
+  .diary-form .notes { flex-basis: 100%; }
+  .diary-form .actions { flex-basis: 100%; display: flex; gap: 10px; }
+  .diary-form button {
+    background: var(--accent); color: #fff; border: none;
+    padding: 10px 22px; border-radius: 22px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .diary-form button.secondary {
+    background: transparent; color: var(--text-soft);
+    border: 1px solid var(--border);
+  }
+  .diary-form button:hover { filter: brightness(1.05); }
+  .diary-form button[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+  .diary-status {
+    font-size: 13px; color: var(--muted); margin: 8px 0 0; min-height: 1.4em;
+  }
+  .diary-status.error { color: #b13d3d; }
+  .diary-status.ok { color: #4f8a3a; }
+
+  .diary-card {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 18px;
+    margin: 0 0 20px;
+  }
+  .diary-card h2 { margin-top: 0; }
+  .diary-card .range {
+    display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 14px;
+  }
+  .diary-card .range button {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: var(--text-soft);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .diary-card .range button.active {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+
+  .symptom-series { margin: 10px 0 18px; }
+  .symptom-series h3 {
+    font-size: 14px; color: var(--text); font-weight: 600;
+    margin: 0 0 6px; display: flex; align-items: center; gap: 6px;
+  }
+  .symptom-series .avg {
+    font-size: 12px; color: var(--muted); font-weight: 400;
+  }
+  .chart {
+    display: flex; align-items: flex-end; gap: 1px;
+    height: 60px; padding: 4px 0; overflow-x: auto;
+  }
+  .chart .bar {
+    flex: 1 0 6px; min-width: 4px;
+    border-radius: 2px 2px 0 0;
+    background: var(--accent); opacity: 0.85;
+  }
+  .chart .bar.empty { background: transparent; border-bottom: 1px solid var(--border); }
+  .chart .bar.lvl-0 { background: transparent; border-bottom: 1px solid var(--border); }
+  .chart .bar.lvl-1 { background: #E3C5A0; opacity: 0.7; }
+  .chart .bar.lvl-2 { background: #D2A079; opacity: 0.8; }
+  .chart .bar.lvl-3 { background: #C28161; opacity: 0.9; }
+  .chart .bar.lvl-4 { background: #B26345; opacity: 0.95; }
+  .chart .bar.lvl-5 { background: #9F4830; opacity: 1; }
+  .chart-x-axis {
+    display: flex; justify-content: space-between;
+    font-size: 11px; color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .entries-list { margin-top: 12px; }
+  .entries-list .entry {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+    font-size: 14px; color: var(--text-soft);
+  }
+  .entries-list .entry:last-child { border-bottom: none; }
+  .entries-list .entry .day {
+    color: var(--muted); font-size: 12px; min-width: 86px;
+  }
+  .entries-list .entry .label { flex: 1; }
+  .entries-list .entry .intensity {
+    color: var(--accent); font-weight: 600;
+  }
+  .entries-list .entry button.del {
+    background: transparent; border: none; color: var(--muted);
+    cursor: pointer; font-size: 16px; padding: 2px 6px;
+  }
+  .entries-list .empty {
+    color: var(--muted); font-size: 13px; padding: 12px 0;
+  }
+
+  .no-code {
+    background: rgba(185, 122, 87, 0.08);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    color: var(--text-soft);
+    margin: 16px 0;
+  }
+  .no-code b { color: var(--text); }
+  .no-code button {
+    background: var(--accent); color: #fff; border: none;
+    padding: 8px 16px; border-radius: 18px; cursor: pointer; font-size: 14px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<header class="lira-header">
+  <a class="brand" href="/">🌸 Lira · Дневник</a>
+  <span class="spacer"></span>
+  <a class="home" href="/">В приложение</a>
+</header>
+
+<main class="lira-main">
+  <h1 class="lira-title">Дневник симптомов</h1>
+
+  <div class="diary-intro">
+    Отмечай каждый день, как себя чувствуешь. Через 2-3 месяца увидишь
+    <b>повторяющиеся узоры</b> — какие симптомы усиливаются перед месячными,
+    какие — после овуляции, и что меняется, когда ты спишь меньше или больше.
+  </div>
+
+  <div id="cycle-code-block"></div>
+
+  <div id="diary-app" hidden>
+    <section class="diary-form" aria-label="Новая запись">
+      <div class="row">
+        <label>
+          День
+          <input type="date" id="d-day">
+        </label>
+        <label>
+          Симптом
+          <select id="d-symptom"></select>
+        </label>
+      </div>
+      <div class="intensity">
+        <span>Интенсивность:</span>
+        <input type="range" id="d-intensity" min="0" max="5" step="1" value="0">
+        <span class="value" id="d-intensity-val">0</span>
+        <span style="color: var(--muted); font-size: 12px;">(0 — нет, 5 — сильно)</span>
+      </div>
+      <label class="notes">
+        Заметка (необязательно)
+        <input type="text" id="d-notes" maxlength="240" placeholder="Например: спала 8 часов, без кофе">
+      </label>
+      <div class="actions">
+        <button id="d-save" type="button">Сохранить</button>
+        <button id="d-clear" type="button" class="secondary">Очистить</button>
+      </div>
+      <div class="diary-status" id="d-status"></div>
+    </section>
+
+    <section class="diary-card" aria-label="Тренды">
+      <h2>Тренды</h2>
+      <div class="range" role="tablist">
+        <button data-range="14" type="button">14 дней</button>
+        <button data-range="30" type="button" class="active">30 дней</button>
+        <button data-range="90" type="button">90 дней</button>
+      </div>
+      <div id="trends-host">
+        <div class="entries-list"><div class="empty">Загружаю…</div></div>
+      </div>
+    </section>
+
+    <section class="diary-card" aria-label="Все записи">
+      <h2>Последние записи</h2>
+      <div class="entries-list" id="entries-list">
+        <div class="empty">Загружаю…</div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+"use strict";
+
+// ----- Symptom catalogue: stays in sync with backend ALLOWED_SYMPTOMS. ---- //
+// If the backend list ever changes, we still fall back to this set when the
+// /v1/lira/diary/symptoms call fails.
+const FALLBACK_SYMPTOMS = [
+  { key: "cramps",   label: "Спазмы",        emoji: "💢" },
+  { key: "headache", label: "Голова",        emoji: "🤕" },
+  { key: "mood",     label: "Настроение",    emoji: "💭" },
+  { key: "energy",   label: "Энергия",       emoji: "⚡" },
+  { key: "sleep",    label: "Сон",           emoji: "😴" },
+  { key: "appetite", label: "Аппетит",       emoji: "🍽️" },
+  { key: "bloating", label: "Вздутие",       emoji: "🎈" },
+  { key: "acne",     label: "Высыпания",     emoji: "🔴" },
+  { key: "libido",   label: "Либидо",        emoji: "🌶️" },
+  { key: "anxiety",  label: "Тревога",       emoji: "🌪️" },
+];
+
+const SYMPTOM_LABELS = Object.fromEntries(
+  FALLBACK_SYMPTOMS.map(s => [s.key, { label: s.label, emoji: s.emoji }])
+);
+
+// ----- Cycle code: read from localStorage written by the main app. -------- //
+// The compiled web bundle persists a per-device cycle code under
+// "lira.cycleCode" (or "cycleCode" depending on bundle version). We read
+// both and prefer the most recent non-empty value. If neither is set, we
+// show a friendly "set up a cycle first" block.
+function readCycleCode() {
+  const keys = [
+    "lira.cycleCode",
+    "cycleCode",
+    "lira:cycleCode",
+    "lira_cycle_code",
+  ];
+  for (const k of keys) {
+    try {
+      const v = (localStorage.getItem(k) || "").trim();
+      if (v && /^[0-9A-Z-]{6,16}$/i.test(v)) {
+        return v.toUpperCase();
+      }
+    } catch (_e) { /* ignore */ }
+  }
+  return null;
+}
+
+let cycleCode = readCycleCode();
+let allowedSymptoms = FALLBACK_SYMPTOMS.map(s => s.key);
+let currentRangeDays = 30;
+const $ = (id) => document.getElementById(id);
+
+function setStatus(text, kind) {
+  const el = $("d-status");
+  if (!el) return;
+  el.textContent = text || "";
+  el.className = "diary-status" + (kind ? " " + kind : "");
+}
+
+function renderCycleCodeBlock() {
+  const host = $("cycle-code-block");
+  if (cycleCode) {
+    host.innerHTML = "";
+    $("diary-app").hidden = false;
+    return;
+  }
+  host.innerHTML =
+    '<div class="no-code"><b>Не нашли твой цикл-код.</b><br>' +
+    'Дневник связан с твоей основной программой Lira через локальный код.<br>' +
+    'Открой <a href="/">приложение Lira</a>, заполни первую анкету — после этого ' +
+    'код появится автоматически. Если уже всё прошла, попробуй обновить эту страницу.<br>' +
+    '<button id="cc-manual" type="button">Ввести код вручную</button></div>';
+  $("cc-manual").addEventListener("click", () => {
+    const code = (prompt("Введи свой cycle-code (8 символов в формате XXXX-XXXX):") || "").trim();
+    if (!code) return;
+    try { localStorage.setItem("lira.cycleCode", code.toUpperCase()); } catch (_e) {}
+    cycleCode = code.toUpperCase();
+    init();
+  });
+}
+
+function fillSymptomSelect() {
+  const sel = $("d-symptom");
+  sel.innerHTML = "";
+  for (const key of allowedSymptoms) {
+    const meta = SYMPTOM_LABELS[key] || { label: key, emoji: "" };
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = `${meta.emoji} ${meta.label}`.trim();
+    sel.appendChild(opt);
+  }
+}
+
+function todayIso() {
+  const d = new Date();
+  const tz = d.getTimezoneOffset();
+  const local = new Date(d.getTime() - tz * 60_000);
+  return local.toISOString().slice(0, 10);
+}
+
+async function loadAllowed() {
+  try {
+    const r = await fetch("/v1/lira/diary/symptoms");
+    if (!r.ok) throw new Error("bad status");
+    const j = await r.json();
+    if (Array.isArray(j.symptoms) && j.symptoms.length > 0) {
+      allowedSymptoms = j.symptoms;
+    }
+  } catch (_e) { /* keep fallback */ }
+  fillSymptomSelect();
+}
+
+async function loadData() {
+  if (!cycleCode) return;
+  const url = `/v1/lira/diary?cycle_code=${encodeURIComponent(cycleCode)}&days_back=${currentRangeDays}`;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`bad status ${r.status}`);
+    const j = await r.json();
+    renderTrends(j.chart || { labels: [], series: {} });
+    renderEntries(j.entries || []);
+  } catch (e) {
+    $("trends-host").innerHTML = '<div class="entries-list"><div class="empty">Не удалось загрузить данные.</div></div>';
+    $("entries-list").innerHTML = '<div class="empty">Не удалось загрузить записи.</div>';
+  }
+}
+
+function renderTrends(chart) {
+  const host = $("trends-host");
+  const labels = chart.labels || [];
+  const series = chart.series || {};
+  const keys = Object.keys(series);
+  if (keys.length === 0) {
+    host.innerHTML = '<div class="empty" style="color: var(--muted); font-size: 14px; padding: 8px 0;">Пока пусто. Добавь первую запись — она появится здесь.</div>';
+    return;
+  }
+  const parts = [];
+  for (const key of keys) {
+    const data = series[key] || [];
+    const nonZero = data.filter(v => v > 0);
+    const avg = nonZero.length ? (nonZero.reduce((a, b) => a + b, 0) / nonZero.length).toFixed(1) : "—";
+    const meta = SYMPTOM_LABELS[key] || { label: key, emoji: "" };
+    let bars = "";
+    for (const v of data) {
+      const lvl = Math.max(0, Math.min(5, v|0));
+      const h = lvl === 0 ? 2 : Math.round(8 + lvl * 10);
+      bars += `<div class="bar lvl-${lvl}" style="height: ${h}px" title="${labels[bars.length] || ''}: ${lvl}"></div>`;
+    }
+    const first = labels[0] || "";
+    const last = labels[labels.length - 1] || "";
+    parts.push(
+      `<div class="symptom-series">
+        <h3>${meta.emoji} ${meta.label} <span class="avg">· среднее ${avg}/5</span></h3>
+        <div class="chart">${bars}</div>
+        <div class="chart-x-axis"><span>${first}</span><span>${last}</span></div>
+      </div>`
+    );
+  }
+  host.innerHTML = parts.join("");
+}
+
+function renderEntries(entries) {
+  const host = $("entries-list");
+  if (!entries || entries.length === 0) {
+    host.innerHTML = '<div class="empty">Пока пусто. Сохрани первую запись формой выше — она появится здесь.</div>';
+    return;
+  }
+  const parts = [];
+  // Newest first; the API already returns it that way but be defensive.
+  entries.sort((a, b) => (a.day < b.day ? 1 : -1));
+  // Cap to last 50 in the UI to keep the page light.
+  for (const e of entries.slice(0, 50)) {
+    const meta = SYMPTOM_LABELS[e.symptom] || { label: e.symptom, emoji: "" };
+    const notesHtml = e.notes ? `<span style="color: var(--muted);"> · ${escapeHtml(e.notes)}</span>` : "";
+    parts.push(
+      `<div class="entry" data-day="${e.day}" data-symptom="${e.symptom}">
+        <span class="day">${e.day}</span>
+        <span class="label">${meta.emoji} ${meta.label}${notesHtml}</span>
+        <span class="intensity">${e.intensity}/5</span>
+        <button class="del" title="Удалить" aria-label="Удалить">✕</button>
+      </div>`
+    );
+  }
+  host.innerHTML = parts.join("");
+  host.querySelectorAll("button.del").forEach(btn => {
+    btn.addEventListener("click", () => removeEntry(btn.parentElement));
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[c]);
+}
+
+async function removeEntry(rowEl) {
+  if (!rowEl || !cycleCode) return;
+  const day = rowEl.dataset.day;
+  const symptom = rowEl.dataset.symptom;
+  if (!day || !symptom) return;
+  if (!confirm(`Удалить запись «${SYMPTOM_LABELS[symptom]?.label || symptom}» за ${day}?`)) return;
+  const url = `/v1/lira/diary/entry?cycle_code=${encodeURIComponent(cycleCode)}&day=${encodeURIComponent(day)}&symptom=${encodeURIComponent(symptom)}`;
+  try {
+    const r = await fetch(url, { method: "DELETE" });
+    if (!r.ok) throw new Error("bad status");
+    await loadData();
+  } catch (e) {
+    setStatus("Не удалось удалить — попробуй ещё раз.", "error");
+  }
+}
+
+async function saveEntry() {
+  if (!cycleCode) return;
+  const day = $("d-day").value;
+  const symptom = $("d-symptom").value;
+  const intensity = parseInt($("d-intensity").value, 10) || 0;
+  const notes = $("d-notes").value.trim();
+  if (!day || !symptom) {
+    setStatus("Выбери день и симптом.", "error");
+    return;
+  }
+  $("d-save").disabled = true;
+  setStatus("Сохраняю…");
+  try {
+    const r = await fetch("/v1/lira/diary/entry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cycle_code: cycleCode,
+        day,
+        symptom,
+        intensity,
+        notes: notes || null,
+      }),
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      throw new Error(`HTTP ${r.status}: ${txt}`);
+    }
+    setStatus("Сохранено ✓", "ok");
+    $("d-notes").value = "";
+    await loadData();
+  } catch (e) {
+    setStatus("Не удалось сохранить. " + (e.message || ""), "error");
+  } finally {
+    $("d-save").disabled = false;
+  }
+}
+
+function bindUi() {
+  $("d-day").value = todayIso();
+  $("d-intensity").addEventListener("input", () => {
+    $("d-intensity-val").textContent = $("d-intensity").value;
+  });
+  $("d-save").addEventListener("click", saveEntry);
+  $("d-clear").addEventListener("click", () => {
+    $("d-intensity").value = 0;
+    $("d-intensity-val").textContent = "0";
+    $("d-notes").value = "";
+    setStatus("");
+  });
+  document.querySelectorAll(".range button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".range button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentRangeDays = parseInt(btn.dataset.range, 10) || 30;
+      loadData();
+    });
+  });
+}
+
+async function init() {
+  renderCycleCodeBlock();
+  if (!cycleCode) return;
+  bindUi();
+  await loadAllowed();
+  await loadData();
+}
+
+init();
+</script>
+</body>
+</html>

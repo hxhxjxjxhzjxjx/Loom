@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 
-from sqlalchemy import delete
+from sqlalchemy import asc, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.models import CycleForecast, User
@@ -56,3 +56,39 @@ async def replace_user_forecast(
         )
     await session.flush()
     return len(entries)
+
+
+async def latest_user_forecast(
+    session: AsyncSession, user: User
+) -> list[ForecastEntry]:
+    """Return all stored forecast entries for *user* sorted by cycle_start.
+
+    Used by the partner-view page to render the next predicted cycles.
+    Returns an empty list when the user has never paired+pushed her
+    forecast (rather than ``None``, which keeps the caller simple).
+    """
+    stmt = (
+        select(CycleForecast)
+        .where(CycleForecast.user_id == user.id)
+        .order_by(asc(CycleForecast.cycle_start))
+    )
+    rows = (await session.execute(stmt)).scalars().all()
+    today = date.today()
+    out: list[ForecastEntry] = []
+    upcoming_only: list[ForecastEntry] = []
+    for r in rows:
+        entry = ForecastEntry(
+            cycle_start=r.cycle_start,
+            period_end=r.period_end,
+            ovulation=r.ovulation,
+            fertile_start=r.fertile_start,
+            fertile_end=r.fertile_end,
+        )
+        out.append(entry)
+        if r.period_end >= today:
+            upcoming_only.append(entry)
+    # If we still have at least one cycle whose period_end is in the
+    # future, return only those (the partner page should never show a
+    # cycle that already finished weeks ago). Otherwise return the full
+    # list so the page can show "месячные шли N дней назад" gracefully.
+    return upcoming_only or out

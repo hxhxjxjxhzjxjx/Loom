@@ -9,6 +9,7 @@ from bot.models.order import Order, OrderStatus
 from bot.models.delivery_history import DeliveryHistory
 from bot.models.pairing_token import PairingToken
 from bot.models.cycle_forecast import CycleForecast
+from bot.models.symptom_entry import SymptomEntry
 
 __all__ = [
     "Base",
@@ -24,4 +25,5 @@ __all__ = [
     "DeliveryHistory",
     "PairingToken",
     "CycleForecast",
+    "SymptomEntry",
 ]
