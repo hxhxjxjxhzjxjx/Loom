@@ -1,0 +1,3998 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Lira</title>
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height — use 100% (stable) instead
+         of 100vh so iOS Safari doesn't resize the layout when the soft
+         keyboard slides in. */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+        /* Lift the entire UI by exactly the overlap between the focused
+           input and the on-screen keyboard, smoothly, so the screen
+           itself stays static (no React re-layout — Dimensions ignores
+           visualViewport changes in the patched bundle). */
+        transform: translateY(calc(-1 * var(--lira-kbd-shift, 0px)));
+        transition: transform 220ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        will-change: transform;
+      }
+      /* When the soft keyboard is up, hide bottom-anchored navigation
+         and chip-rows so they don't visually overlap the lifted input.
+         Driven by JS via body.lira-kbd-open. */
+      body.lira-kbd-open div[role="tablist"]{
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 180ms ease;
+      }
+    </style>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+  <meta name="theme-color" content="#7A2E5A" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Lira" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="Lira" />
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js').catch(function(){});
+      });
+    }
+  </script>
+
+  <!-- ──────────────────────────────────────────────────────────────────
+       Yandex.Metrika (web analytics). PLACEHOLDER — operator replaces
+       `00000000` with the counter ID from https://metrika.yandex.ru/.
+       Leaving it at `00000000` makes the script a no-op (no network call),
+       so we ship without it being broken for users.
+       Privacy: trackHash on, no clickmap, no webvisor (no recording of
+       user input). The policy text in /legal/privacy.html mentions this.
+       ────────────────────────────────────────────────────────────────── -->
+  <script>
+    (function(){
+      var ID = '00000000';  // TODO: paste your Yandex.Metrika counter ID
+      if (ID === '00000000') return;
+      (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+      m[i].l=1*new Date();
+      for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+      k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+      (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+      window.ym(parseInt(ID,10), "init", { defer:true, trackHash:true, clickmap:false, accurateTrackBounce:true, webvisor:false });
+    })();
+  </script>
+
+  <!-- ──────────────────────────────────────────────────────────────────
+       Sentry JS error reporter. PLACEHOLDER — paste DSN from
+       https://sentry.io (free plan = 5000 errors/mo). Leaving DSN empty
+       makes this a no-op.
+       ────────────────────────────────────────────────────────────────── -->
+  <script>
+    (function(){
+      var DSN = '';  // TODO: paste Sentry DSN here
+      if (!DSN) return;
+      var s = document.createElement('script');
+      s.src = 'https://browser.sentry-cdn.com/8.20.0/bundle.min.js';
+      s.crossOrigin = 'anonymous';
+      s.onload = function(){ try { window.Sentry.init({ dsn: DSN, tracesSampleRate: 0.1, environment: location.hostname }); } catch(e){} };
+      document.head.appendChild(s);
+    })();
+  </script>
+  </head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+
+    <!-- Legal-info button + modal (lives outside #root so SPA can't re-render it).
+         Pairs with the gear: gear in top-right opens Settings, this small
+         ⓘ button opens a sheet with links to the four compliance pages.
+         Google Play & ru-store both require visible legal links from the
+         app surface; Yandex.Metrika & ЮКасса checks for them too. -->
+    <style>
+      #lira-legal-btn{position:fixed;top:max(env(safe-area-inset-top,0px),12px);right:62px;width:36px;height:36px;border-radius:18px;background:rgba(255,252,247,0.92);border:1px solid #EADBC4;display:flex;align-items:center;justify-content:center;z-index:9998;cursor:pointer;font-size:18px;line-height:1;color:#7E5A3A;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-weight:600;box-shadow:0 4px 14px rgba(142,111,88,0.18);transition:transform 0.15s ease}
+      #lira-legal-btn:hover{transform:scale(1.05)}
+      @media(min-width:700px){#lira-legal-btn{position:absolute;top:32px;right:calc(50% - 152px)}}
+      #lira-legal-sheet{position:fixed;inset:0;z-index:11000;background:rgba(58,42,30,0.45);display:none;align-items:flex-end;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+      #lira-legal-sheet.visible{display:flex}
+      .lira-legal-card{width:100%;max-width:440px;background:#FFFCF7;border-radius:24px 24px 0 0;padding:20px 22px calc(28px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 30px rgba(58,42,30,0.18);display:flex;flex-direction:column;gap:6px;animation:lira-legal-up 0.22s ease}
+      @keyframes lira-legal-up{from{transform:translateY(20px);opacity:0.7}to{transform:translateY(0);opacity:1}}
+      @media(min-width:700px){#lira-legal-sheet{align-items:center}.lira-legal-card{border-radius:24px;max-width:380px}}
+      .lira-legal-title{font-size:17px;font-weight:600;color:#3D2C1E;margin:0 0 4px;text-align:center}
+      .lira-legal-sub{font-size:12px;color:#8E7156;margin:0 0 12px;text-align:center}
+      .lira-legal-row{display:flex;align-items:center;justify-content:space-between;padding:14px 14px;border-radius:14px;background:#FBF3E6;border:1px solid #EADBC4;color:#3D2C1E;text-decoration:none;font-size:14px;font-weight:500;margin-bottom:6px}
+      .lira-legal-row:hover{background:#F5E9D2}
+      .lira-legal-row .arr{color:#B97A57;font-size:18px}
+      .lira-legal-close{height:44px;border-radius:22px;border:none;background:#EADBC4;color:#5C4733;font-size:14px;font-weight:600;margin-top:8px;cursor:pointer;font-family:inherit}
+    </style>
+    <button id="lira-legal-btn" type="button" aria-label="Правовая информация">ⓘ</button>
+    <div id="lira-legal-sheet" role="dialog" aria-modal="true" aria-label="Правовая информация">
+      <div class="lira-legal-card">
+        <p class="lira-legal-title">Правовая информация</p>
+        <p class="lira-legal-sub">По вопросам подписки, возвратов и данных</p>
+        <a class="lira-legal-row" href="/legal/about.html" target="_blank" rel="noopener"><span>🌸 О сервисе</span><span class="arr">›</span></a>
+        <a class="lira-legal-row" href="/legal/privacy.html" target="_blank" rel="noopener"><span>🔒 Политика конфиденциальности</span><span class="arr">›</span></a>
+        <a class="lira-legal-row" href="/legal/offer.html" target="_blank" rel="noopener"><span>📄 Договор-оферта</span><span class="arr">›</span></a>
+        <a class="lira-legal-row" href="/legal/contacts.html" target="_blank" rel="noopener"><span>✉️ Контакты и поддержка</span><span class="arr">›</span></a>
+        <button class="lira-legal-close" type="button" id="lira-legal-close-btn">Закрыть</button>
+      </div>
+    </div>
+    <script>
+      (function(){
+        var btn = document.getElementById('lira-legal-btn');
+        var sheet = document.getElementById('lira-legal-sheet');
+        var close = document.getElementById('lira-legal-close-btn');
+        if (!btn || !sheet) return;
+        btn.addEventListener('click', function(){ sheet.classList.add('visible'); });
+        close && close.addEventListener('click', function(){ sheet.classList.remove('visible'); });
+        sheet.addEventListener('click', function(e){ if (e.target === sheet) sheet.classList.remove('visible'); });
+        document.addEventListener('keydown', function(e){ if (e.key === 'Escape') sheet.classList.remove('visible'); });
+      })();
+    </script>
+  <script src="/_expo/static/js/web/index-96e0bdac4178cd8172020564110deb3c.js" defer></script>
+
+<style id="lira-gear-style">
+  #lira-gear{position:fixed;top:max(env(safe-area-inset-top,0px),12px);right:14px;width:40px;height:40px;border-radius:20px;background:rgba(255,252,247,0.92);border:1px solid #EADBC4;display:flex;align-items:center;justify-content:center;z-index:9999;cursor:pointer;box-shadow:0 4px 14px rgba(142,111,88,0.18);transition:transform 0.15s ease}
+  #lira-gear:hover{transform:rotate(20deg)}
+  #lira-gear svg{width:22px;height:22px;color:#7E5A3A}
+  @media(min-width:700px){#lira-gear{position:absolute;top:30px;right:calc(50% - 198px)}}
+  /* Settings lives only on the top-right gear — hide the bottom tab entry.
+     Hide the wrapper element rather than the inner <a> so flex doesn't
+     reserve its share of the row width (otherwise the remaining tabs
+     leave a one-tab gap). Programmatic .click() from the gear still
+     reaches the hidden <a>, so navigation keeps working. */
+  div[role="tablist"] > div:has(> a[role="tab"][href="/Tabs/Settings"]){display:none}
+</style>
+<button id="lira-gear" aria-label="Настройки" type="button">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3"></circle>
+    <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8L4.2 7a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"></path>
+  </svg>
+</button>
+<script id="lira-gear-script">
+(function(){
+  var gear=document.getElementById('lira-gear');
+  function findSettingsTab(){
+    var tabs=document.querySelectorAll('[role="tab"]');
+    for(var i=0;i<tabs.length;i++){
+      var t=tabs[i];
+      var label=(t.getAttribute('aria-label')||'').toLowerCase();
+      var href=(t.getAttribute('href')||'').toLowerCase();
+      if(label.indexOf('настр')>-1||label.indexOf('settings')>-1||href.indexOf('settings')>-1){return t;}
+    }
+    return null;
+  }
+  function clickSettingsTab(){
+    var t=findSettingsTab();
+    if(!t)return false;
+    // Tab item may be hidden via display:none; flash visible so the click takes effect.
+    var prev=t.style.display;
+    t.style.display='flex';
+    try{
+      var rect=t.getBoundingClientRect();
+      var x=rect.left+rect.width/2,y=rect.top+rect.height/2;
+      ['mousedown','mouseup','click'].forEach(function(type){
+        t.dispatchEvent(new MouseEvent(type,{bubbles:true,cancelable:true,view:window,clientX:x,clientY:y,button:0}));
+      });
+      // react-native-web's pressable also listens for pointer events
+      ['pointerdown','pointerup'].forEach(function(type){
+        t.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,view:window,clientX:x,clientY:y,pointerType:'mouse',isPrimary:true}));
+      });
+      t.click();
+    }catch(e){console.warn('lira-gear click error',e);}
+    setTimeout(function(){t.style.display=prev;},0);
+    return true;
+  }
+  function isOnSettings(){
+    var t=findSettingsTab();
+    return !!(t&&t.getAttribute('aria-selected')==='true');
+  }
+  function update(){gear.style.display=isOnSettings()?'none':'flex';}
+  window.addEventListener('popstate',update);
+  ['pushState','replaceState'].forEach(function(n){var o=history[n];history[n]=function(){var r=o.apply(this,arguments);window.dispatchEvent(new Event('lira:nav'));setTimeout(update,30);return r;};});
+  window.addEventListener('lira:nav',update);
+  // Re-evaluate visibility shortly after each click anywhere on the page.
+  document.addEventListener('click',function(){setTimeout(update,30);},true);
+  gear.addEventListener('click',function(){
+    if(isOnSettings())return;
+    clickSettingsTab();
+    setTimeout(update,30);
+  });
+  // Initial state may not be ready yet; poll briefly.
+  var tries=0;var iv=setInterval(function(){tries++;update();if(tries>40)clearInterval(iv);},250);
+})();
+</script>
+<!-- LIRA_GEAR_INJECTED -->
+
+<!-- LIRA_KEYBOARD_INJECTED -->
+<script id="lira-keyboard-script">
+(function(){
+  // Make screens static while the soft keyboard is open: instead of
+  // re-laying out the whole React tree (which causes the jumpy /
+  // shifting feeling), keep the layout the same and just lift the
+  // focused input above the keyboard via a CSS transform on #root.
+  //
+  // Companion bundle patches (in index-*.js) force RN-Web's Dimensions
+  // API to ignore visualViewport changes, so React never re-renders on
+  // keyboard show/hide.
+  var vv = window.visualViewport;
+  if (!vv) return;
+  var doc = document.documentElement;
+  var focused = null;
+
+  function setShift(px){
+    var v = Math.max(0, px);
+    doc.style.setProperty('--lira-kbd-shift', v + 'px');
+    if (v > 0) document.body.classList.add('lira-kbd-open');
+    else document.body.classList.remove('lira-kbd-open');
+  }
+
+  function recompute(){
+    if (!focused || !focused.isConnected) { setShift(0); return; }
+    var kbd = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    if (kbd < 50) { setShift(0); return; }   // keyboard probably not up
+    var rect = focused.getBoundingClientRect();
+    // Visible bottom of the layout viewport when keyboard is up.
+    var visibleBottom = vv.height + vv.offsetTop;
+    var overlap = (rect.bottom + 12) - visibleBottom;   // 12px breathing room
+    setShift(overlap);
+  }
+
+  function isTextInput(el){
+    if (!el) return false;
+    if (el.tagName === 'TEXTAREA') return true;
+    if (el.tagName === 'INPUT'){
+      var t = (el.type || 'text').toLowerCase();
+      // Only types that summon the keyboard.
+      return ['text','search','email','url','tel','number','password','date','datetime-local','time','month','week'].indexOf(t) >= 0;
+    }
+    if (el.isContentEditable) return true;
+    return false;
+  }
+
+  document.addEventListener('focusin', function(e){
+    if (!isTextInput(e.target)) return;
+    focused = e.target;
+    // Wait a frame for the keyboard to start sliding in so vv.height
+    // is up to date.
+    requestAnimationFrame(recompute);
+    setTimeout(recompute, 80);
+    setTimeout(recompute, 250);
+  }, true);
+
+  // focusout fires BEFORE the next focusin when the user taps a different
+  // input, which used to drop the keyboard shift to 0 for one frame and
+  // produced a visible jump. Defer the reset so an immediately-following
+  // focusin can overwrite `focused` first and skip the reset.
+  document.addEventListener('focusout', function(e){
+    var leaving = e.target;
+    setTimeout(function(){
+      if (focused === leaving || !document.activeElement || !isTextInput(document.activeElement)) {
+        focused = null;
+        setShift(0);
+      }
+    }, 50);
+  }, true);
+
+  vv.addEventListener('resize', recompute);
+  vv.addEventListener('scroll', recompute);
+})();
+</script>
+<!-- LIRA_KEYBOARD_INJECTED -->
+
+<!-- LIRA_CONSENT_INJECTED -->
+<style id="lira-consent-style">
+  #lira-consent-overlay{position:fixed;inset:0;z-index:20000;background:#FFFCF7;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#3D2C1E;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #lira-consent-overlay.hidden{display:none}
+  .lira-consent-card{width:100%;max-width:520px;background:#FFFCF7;border-radius:24px;padding:24px 22px;box-shadow:0 12px 40px rgba(58,42,30,0.12);border:1px solid #F1E5D2;display:flex;flex-direction:column;gap:14px;margin:auto;box-sizing:border-box}
+  .lira-consent-emoji{font-size:42px;line-height:1;text-align:center}
+  .lira-consent-title{font-size:22px;font-weight:600;color:#3D2C1E;margin:0;letter-spacing:-0.2px;text-align:center}
+  .lira-consent-lead{font-size:14px;color:#5C4733;margin:0;line-height:1.5;text-align:center}
+  .lira-consent-details{margin:0;padding:14px 16px;border-radius:14px;background:#FBF3E6;border:1px solid #F1E5D2;font-size:13px;color:#5C4733;line-height:1.5}
+  .lira-consent-details summary{cursor:pointer;font-weight:600;color:#7E5A3A;font-size:14px;outline:none;list-style:none;display:flex;align-items:center;gap:8px}
+  .lira-consent-details summary::-webkit-details-marker{display:none}
+  .lira-consent-details summary::after{content:"\25BE";font-size:11px;color:#B97A57;transition:transform 0.15s ease;margin-left:auto}
+  .lira-consent-details[open] summary::after{transform:rotate(180deg)}
+  .lira-consent-details p{margin:10px 0 0}
+  .lira-consent-details b{color:#3D2C1E;font-weight:600}
+  .lira-consent-check{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid #EADBC4;border-radius:14px;background:#FFFCF7;cursor:pointer;font-size:13px;line-height:1.45;color:#3D2C1E}
+  .lira-consent-check input{appearance:none;-webkit-appearance:none;width:20px;height:20px;border-radius:6px;border:1.5px solid #C9B393;background:#FFFCF7;flex-shrink:0;margin:0;cursor:pointer;position:relative;transition:all 0.12s ease}
+  .lira-consent-check input:checked{background:#B97A57;border-color:#B97A57}
+  .lira-consent-check input:checked::after{content:"";position:absolute;left:5px;top:1px;width:6px;height:11px;border:solid #FFFCF7;border-width:0 2px 2px 0;transform:rotate(45deg)}
+  .lira-consent-check a{color:#7A2E5A;text-decoration:underline;text-underline-offset:2px}
+  .lira-consent-accept{height:48px;border-radius:24px;border:none;font-size:15px;font-weight:600;background:#B97A57;color:#FFFCF7;box-shadow:0 4px 14px rgba(185,122,87,0.3);cursor:pointer;font-family:inherit;letter-spacing:0.2px;transition:filter 0.12s ease,opacity 0.12s ease}
+  .lira-consent-accept:hover{filter:brightness(1.05)}
+  .lira-consent-accept:disabled{opacity:0.45;cursor:not-allowed;box-shadow:none}
+  .lira-consent-foot{font-size:11px;color:#8E7156;margin:0;line-height:1.45;text-align:center}
+</style>
+
+<div id="lira-consent-overlay" role="dialog" aria-modal="true" aria-label="Знакомство с Лирой">
+  <div class="lira-consent-card">
+    <div class="lira-consent-emoji">&#127800;</div>
+    <h1 class="lira-consent-title">Привет, я Лира</h1>
+    <p class="lira-consent-lead">Буду заботиться о тебе каждый месяц — отслеживать цикл, мягко напоминать о важном и привозить боксы заботы.</p>
+
+    <label class="lira-consent-check">
+      <input type="checkbox" id="lira-consent-age">
+      <span>Мне есть 16 лет. Я понимаю, что Lira — не медицинский сервис.</span>
+    </label>
+
+    <label class="lira-consent-check">
+      <input type="checkbox" id="lira-consent-checkbox">
+      <span>Согласна с <a href="/legal/privacy.html" target="_blank" rel="noopener">политикой обработки данных</a> и <a href="/legal/offer.html" target="_blank" rel="noopener">офертой</a>.</span>
+    </label>
+
+    <button id="lira-consent-accept" class="lira-consent-accept" type="button" disabled>Начнём</button>
+
+    <details class="lira-consent-details">
+      <summary>Кратко о данных (152-ФЗ)</summary>
+      <p><b>Какие данные:</b> цикл, симптомы, заметки, ответы анкеты, адрес доставки.</p>
+      <p><b>Где хранятся:</b> локально в браузере (localStorage). На сервер уходят только данные для оформления подписки.</p>
+      <p><b>Цели:</b> прогноз цикла, доставка бокса, напоминания.</p>
+      <p><b>Срок:</b> до отзыва согласия. Удалить — через настройки браузера или письмо на support@.</p>
+      <p><b>Третьи лица:</b> только платёжный провайдер и служба доставки.</p>
+      <p>Полный текст — на странице <a href="/legal/privacy.html" target="_blank" rel="noopener">политики конфиденциальности</a>.</p>
+    </details>
+  </div>
+</div>
+
+<script id="lira-consent-script">
+(function(){
+  'use strict';
+  var KEY = '@lira/consent/v1';
+  var overlay = document.getElementById('lira-consent-overlay');
+  if(!overlay) return;
+
+  // Уже соглашалась — прячем сразу, чтобы не мигало.
+  try{
+    if(localStorage.getItem(KEY)){
+      overlay.classList.add('hidden');
+      return;
+    }
+  }catch(e){}
+
+  // Пока согласие не подтверждено — блокируем прокрутку body.
+  var prevHtmlOverflow = document.documentElement.style.overflow;
+  var prevBodyOverflow = document.body ? document.body.style.overflow : '';
+  document.documentElement.style.overflow = 'hidden';
+  if(document.body) document.body.style.overflow = 'hidden';
+
+  var box = document.getElementById('lira-consent-checkbox');
+  var age = document.getElementById('lira-consent-age');
+  var btn = document.getElementById('lira-consent-accept');
+  // Both checkboxes must be ticked: age (16+) AND consent. Required
+  // to satisfy 152-ФЗ (informed consent) AND to legally guard the
+  // women's-health service from being marketed to minors.
+  function refresh(){
+    if(!btn) return;
+    btn.disabled = !(box && box.checked && age && age.checked);
+  }
+  if(box) box.addEventListener('change', refresh);
+  if(age) age.addEventListener('change', refresh);
+  if(btn){
+    btn.addEventListener('click', function(){
+      if(!box || !box.checked) return;
+      if(!age || !age.checked) return;
+      var now = new Date().toISOString();
+      try{
+        localStorage.setItem(KEY, JSON.stringify({
+          accepted: true,
+          ageConfirmed: true,
+          version: 2,
+          at: now
+        }));
+      }catch(e){}
+      // Прокидываем согласие и в стор React-приложения, чтобы не показывать
+      // второй экран онбординга с юридическим текстом. consentAcceptedAt
+      // хранится на верхнем уровне data, а не внутри profile.
+      try{
+        var APP_KEY = '@cycle-tracker/data/v1';
+        var raw = localStorage.getItem(APP_KEY);
+        var data = raw ? JSON.parse(raw) : {};
+        data.consentAcceptedAt = now;
+        localStorage.setItem(APP_KEY, JSON.stringify(data));
+      }catch(e){}
+      overlay.classList.add('hidden');
+      document.documentElement.style.overflow = prevHtmlOverflow || '';
+      if(document.body) document.body.style.overflow = prevBodyOverflow || '';
+      // Перезагружаем, чтобы React-стор подхватил consentAcceptedAt
+      // и не показал второй экран с юридическим текстом.
+      try{ window.location.reload(); }catch(e){}
+    });
+  }
+})();
+</script>
+<!-- LIRA_CONSENT_INJECTED -->
+
+<style id="lira-pay-style">
+  #lira-pay-overlay{position:fixed;inset:0;z-index:10000;background:rgba(58,42,30,0.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:none;align-items:flex-end;justify-content:center;animation:lira-pay-fade 0.18s ease}
+  #lira-pay-overlay.visible{display:flex}
+  @keyframes lira-pay-fade{from{opacity:0}to{opacity:1}}
+  @keyframes lira-pay-slide{from{transform:translateY(24px);opacity:0.6}to{transform:translateY(0);opacity:1}}
+  .lira-pay-card{width:100%;max-width:440px;max-height:92vh;background:#FFFCF7;border-radius:24px 24px 0 0;display:flex;flex-direction:column;animation:lira-pay-slide 0.22s ease;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#3D2C1E;overflow:hidden}
+  @media(min-width:700px){#lira-pay-overlay{align-items:center}.lira-pay-card{border-radius:24px;max-height:88vh}}
+  .lira-pay-header{padding:14px 20px 8px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #F1E5D2}
+  .lira-pay-progress{flex:1;height:6px;background:#F1E5D2;border-radius:3px;overflow:hidden}
+  .lira-pay-progress-fill{height:100%;background:#B97A57;border-radius:3px;transition:width 0.25s ease}
+  .lira-pay-step-text{font-size:12px;color:#8E7156;letter-spacing:0.3px;white-space:nowrap}
+  .lira-pay-close{width:32px;height:32px;border:none;border-radius:16px;background:#F1E5D2;color:#7E5A3A;font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+  .lira-pay-close:hover{background:#E6D4B8}
+  .lira-pay-body{padding:20px;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+  .lira-pay-title{font-size:22px;font-weight:600;color:#3D2C1E;margin:0 0 6px;letter-spacing:-0.2px}
+  .lira-pay-hint{font-size:14px;color:#8E7156;margin:0 0 18px;line-height:1.4}
+  .lira-pay-options{display:flex;flex-direction:column;gap:8px}
+  .lira-pay-option{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1px solid #EADBC4;border-radius:14px;background:#FFFCF7;cursor:pointer;transition:all 0.12s ease;font-size:15px;line-height:1.35;color:#3D2C1E;text-align:left}
+  .lira-pay-option:hover{background:#FBF3E6}
+  .lira-pay-option.active{background:#FBE8D5;border-color:#B97A57;color:#5D4530}
+  .lira-pay-option-mark{width:22px;height:22px;border-radius:11px;border:1.5px solid #C9B393;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#FFFCF7;margin-top:1px;transition:all 0.12s ease}
+  .lira-pay-option.active .lira-pay-option-mark{background:#B97A57;border-color:#B97A57;color:#FFFCF7}
+  .lira-pay-option.checkbox .lira-pay-option-mark{border-radius:6px}
+  .lira-pay-option-mark svg{width:14px;height:14px;display:none}
+  .lira-pay-option.active .lira-pay-option-mark svg{display:block}
+  .lira-pay-input{width:100%;padding:12px 14px;border:1px solid #EADBC4;border-radius:12px;background:#FFFCF7;font-size:15px;color:#3D2C1E;font-family:inherit;box-sizing:border-box;outline:none;transition:border-color 0.12s ease}
+  .lira-pay-input:focus{border-color:#B97A57}
+  .lira-pay-input::placeholder{color:#B7A48B}
+  .lira-pay-textarea{min-height:80px;resize:vertical}
+  .lira-pay-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .lira-pay-fields .full{grid-column:1/-1}
+  .lira-pay-extra{margin-top:12px}
+  .lira-pay-extra-label{font-size:13px;color:#8E7156;margin:0 0 6px}
+  .lira-pay-summary{display:flex;flex-direction:column;gap:14px}
+  .lira-pay-summary-tier{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:16px;background:#FBE8D5;border:1px solid #EADBC4}
+  .lira-pay-summary-emoji{font-size:32px;line-height:1}
+  .lira-pay-summary-tier h3{margin:0 0 2px;font-size:17px;font-weight:600;color:#3D2C1E}
+  .lira-pay-summary-tier p{margin:0;font-size:13px;color:#8E7156}
+  .lira-pay-summary-price{margin-left:auto;font-size:20px;font-weight:600;color:#7E5A3A;white-space:nowrap}
+  .lira-pay-summary-section{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:1px solid #F1E5D2;border-radius:14px;background:#FFFCF7}
+  .lira-pay-summary-section h4{margin:0;font-size:13px;color:#8E7156;font-weight:500;text-transform:uppercase;letter-spacing:0.5px}
+  .lira-pay-summary-section p{margin:0;font-size:14px;color:#3D2C1E;line-height:1.4}
+  .lira-pay-summary-edit{align-self:flex-start;background:none;border:none;color:#B97A57;font-size:13px;padding:0;cursor:pointer;text-decoration:underline}
+  .lira-pay-stub-note{margin-top:6px;padding:10px 14px;border-radius:12px;background:#FFF6E0;border:1px solid #F0DDB6;font-size:12px;color:#8E7156;line-height:1.4}
+  .lira-pay-footer{padding:14px 20px;display:flex;gap:10px;border-top:1px solid #F1E5D2;background:#FFFCF7}
+  .lira-pay-btn{flex:1;height:48px;border-radius:24px;border:none;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:0.2px;transition:filter 0.12s ease,opacity 0.12s ease}
+  .lira-pay-btn-secondary{background:#F1E5D2;color:#7E5A3A}
+  .lira-pay-btn-secondary:hover{background:#E6D4B8}
+  .lira-pay-btn-primary{background:#B97A57;color:#FFFCF7;box-shadow:0 4px 14px rgba(185,122,87,0.3)}
+  .lira-pay-btn-primary:hover{filter:brightness(1.05)}
+  .lira-pay-btn:disabled{opacity:0.45;cursor:not-allowed;box-shadow:none}
+  .lira-pay-tier-list{display:flex;flex-direction:column;gap:10px}
+  .lira-pay-tier-card{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border:1px solid #EADBC4;border-radius:16px;background:#FFFCF7;cursor:pointer;text-align:left;font-family:inherit;color:#3D2C1E;transition:all 0.12s ease}
+  .lira-pay-tier-card:hover{background:#FBF3E6}
+  .lira-pay-tier-card.active{background:#FBE8D5;border-color:#B97A57}
+  .lira-pay-tier-row{display:flex;align-items:center;gap:10px}
+  .lira-pay-tier-emoji{font-size:24px}
+  .lira-pay-tier-title{font-size:16px;font-weight:600;flex:1}
+  .lira-pay-tier-price{font-size:16px;font-weight:600;color:#7E5A3A;white-space:nowrap}
+  .lira-pay-tier-tagline{font-size:13px;color:#8E7156;line-height:1.4;margin:0}
+  /* Stub checkout (in-app fake payment) */
+  .lira-pay-checkout{display:flex;flex-direction:column;gap:14px}
+  .lira-pay-checkout-tier{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:#FBE8D5;border:1px solid #EADBC4}
+  .lira-pay-checkout-tier .emoji{font-size:24px;line-height:1}
+  .lira-pay-checkout-tier .name{flex:1;font-size:15px;font-weight:600;color:#3D2C1E}
+  .lira-pay-checkout-tier .price{font-size:16px;font-weight:600;color:#7E5A3A;white-space:nowrap}
+  .lira-pay-card-form{display:flex;flex-direction:column;gap:12px}
+  .lira-pay-card-row{display:flex;gap:10px}
+  .lira-pay-card-row .lira-pay-card-field{flex:1}
+  .lira-pay-card-field label{display:block;font-size:12px;color:#8E7156;margin:0 0 4px;letter-spacing:0.2px;text-transform:uppercase}
+  .lira-pay-card-stripe{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:12px;background:#FFF6E0;border:1px solid #F0DDB6;font-size:12px;color:#8E7156;line-height:1.4}
+  .lira-pay-card-stripe b{color:#7E5A3A}
+  .lira-pay-card-brands{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+  .lira-pay-card-brands span{font-size:11px;font-weight:600;color:#FFFCF7;background:#3D2C1E;padding:3px 6px;border-radius:4px;letter-spacing:0.5px}
+  .lira-pay-checkout-status{display:flex;flex-direction:column;align-items:center;gap:14px;padding:18px 8px}
+  .lira-pay-spinner{width:48px;height:48px;border-radius:50%;border:4px solid #F1E5D2;border-top-color:#B97A57;animation:lira-pay-spin 0.9s linear infinite}
+  @keyframes lira-pay-spin{to{transform:rotate(360deg)}}
+  .lira-pay-success-circle{width:64px;height:64px;border-radius:50%;background:#B97A57;color:#FFFCF7;display:flex;align-items:center;justify-content:center;animation:lira-pay-pop 0.25s ease}
+  @keyframes lira-pay-pop{from{transform:scale(0.6);opacity:0}to{transform:scale(1);opacity:1}}
+  .lira-pay-success-circle svg{width:34px;height:34px}
+  .lira-pay-success-title{font-size:20px;font-weight:600;color:#3D2C1E;margin:0;text-align:center}
+  .lira-pay-success-text{font-size:14px;color:#5C4733;margin:0;text-align:center;line-height:1.5}
+  .lira-pay-success-meta{width:100%;display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:12px;background:#FFFCF7;border:1px solid #F1E5D2;font-size:13px;color:#5C4733}
+  .lira-pay-success-meta .row{display:flex;justify-content:space-between;gap:10px}
+  .lira-pay-success-meta .row b{color:#3D2C1E;font-weight:600}
+</style>
+
+<div id="lira-pay-overlay" role="dialog" aria-modal="true" aria-label="Оформление подписки">
+  <div class="lira-pay-card" id="lira-pay-card"></div>
+</div>
+
+<script id="lira-pay-script">
+(function(){
+  'use strict';
+
+  /* =====================================================================
+   *  STUB CONFIG — REPLACE THESE WHEN INTEGRATING REAL PAYMENT PROVIDER
+   * =====================================================================
+   *  PAYMENT_URL_TEMPLATE — URL that opens when user taps "Оплатить".
+   *    Substitutions: {tier}, {amount}, {order}.
+   *    Replace the host/path with your real provider's checkout link
+   *    (e.g. ЮKassa "Платёжная ссылка", CloudPayments виджет, СБП-ссылка)
+   *    or build the URL programmatically inside buildPaymentUrl().
+   *
+   *  PAYMENT_PROVIDER_KEY — placeholder for an API/widget key. Not used
+   *    for the stub URL but kept here as a clearly-marked TODO so it is
+   *    easy to wire up later.
+   * ===================================================================== */
+  var PAYMENT_URL_TEMPLATE = 'https://payment-stub.example.com/checkout?tier={tier}&amount={amount}&order={order}';
+  var PAYMENT_PROVIDER_KEY = ''; // TODO: insert real provider key here
+
+  /* USE_STUB_CHECKOUT — когда true, при нажатии «Оплатить» открывается
+   * встроенная фейковая форма карты, симуляция списания и экран успеха,
+   * чтобы можно было прокликать оформление подписки целиком в тестовом
+   * режиме. Когда поставите false — приложение будет открывать
+   * buildPaymentUrl() во внешней вкладке (поведение реального провайдера).
+   */
+  var USE_STUB_CHECKOUT = true; // TODO: set to false when real provider wired up
+
+  function buildPaymentUrl(tariff, surveyData, orderId){
+    /* Replace this implementation with your provider's URL builder when ready. */
+    return PAYMENT_URL_TEMPLATE
+      .replace('{tier}', encodeURIComponent(tariff.slug))
+      .replace('{amount}', encodeURIComponent(String(tariff.price)))
+      .replace('{order}', encodeURIComponent(orderId));
+  }
+  /* ===================================================================== */
+
+  // Активная подписка (пока тестовая). Сохраняем сюда после «оплаты»,
+  // чтобы можно было видеть состояние из консоли / расширить в будущем.
+  var SUBSCRIPTION_KEY = '@lira/subscription/v1';
+  function saveSubscription(record){
+    try{ localStorage.setItem(SUBSCRIPTION_KEY, JSON.stringify(record)); }catch(e){}
+  }
+  function loadSubscription(){
+    try{ var raw = localStorage.getItem(SUBSCRIPTION_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+  }
+  function clearSubscription(){
+    try{ localStorage.removeItem(SUBSCRIPTION_KEY); }catch(e){}
+    resetAppSubscription();
+  }
+
+  // Сама RN-сборка читает активную подписку не из SUBSCRIPTION_KEY а из своего объекта приложения
+  // (`@cycle-tracker/data/v1`, поле .subscription). Чтобы покупка любого тарифа разблокировала премиум-фичи
+  // в самом приложении (PDF-экспорт аналитики, расширенные графики), после стаб-оплаты
+  // записываем tier/renewsAt прямо в этот объект. Логика премиума в бандле:
+  //     isPremium = (active && tier==='premium') || isBasic || isVip
+  // Поэтому достаточно проставить tier и renewsAt в будущее.
+  var APP_DATA_KEY = '@cycle-tracker/data/v1';
+  function applyAppSubscription(rec){
+    try{
+      var raw = localStorage.getItem(APP_DATA_KEY);
+      var data = raw ? JSON.parse(raw) : null;
+      if(!data || typeof data !== 'object') data = {};
+      var tier = (rec && rec.tier) ? rec.tier : 'premium';
+      var paidAt = (rec && rec.paidAt) ? new Date(rec.paidAt) : new Date();
+      if(isNaN(paidAt.getTime())) paidAt = new Date();
+      var renewsAt = new Date(paidAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+      data.subscription = Object.assign({}, data.subscription || {}, {
+        tier: tier,
+        productId: 'lira_' + tier + '_monthly',
+        startedAt: paidAt.toISOString(),
+        renewsAt: renewsAt.toISOString(),
+        cancelled: false,
+        lastSyncedAt: new Date().toISOString(),
+        activationCode: (rec && rec.orderId) ? rec.orderId : null
+      });
+      localStorage.setItem(APP_DATA_KEY, JSON.stringify(data));
+    }catch(e){}
+  }
+  function resetAppSubscription(){
+    try{
+      var raw = localStorage.getItem(APP_DATA_KEY);
+      if(!raw) return;
+      var data = JSON.parse(raw);
+      if(!data || typeof data !== 'object') return;
+      data.subscription = {
+        tier: 'free', productId: null, startedAt: null, renewsAt: null,
+        cancelled: false, lastSyncedAt: null, activationCode: null
+      };
+      localStorage.setItem(APP_DATA_KEY, JSON.stringify(data));
+    }catch(e){}
+  }
+  // Синкаем stub-подписку в объект приложения при загрузке страницы —
+  // нужно для старых пользовательниц, у которых «оплата» была до этого фикса.
+  function syncAppSubscriptionFromStub(){
+    try{
+      var rec = loadSubscription();
+      if(!rec || !rec.tier) return;
+      var raw = localStorage.getItem(APP_DATA_KEY);
+      var data = raw ? JSON.parse(raw) : null;
+      var curTier = data && data.subscription && data.subscription.tier;
+      var curRenews = data && data.subscription && data.subscription.renewsAt;
+      var stillActive = curRenews && new Date(curRenews).getTime() > Date.now();
+      if(curTier === rec.tier && stillActive) return;
+      applyAppSubscription(rec);
+    }catch(e){}
+  }
+  syncAppSubscriptionFromStub();
+
+  // Удобные хелперы для дебага/QA — посмотреть/удалить «оформленную» подписку.
+  try{
+    window.__liraGetSubscription = loadSubscription;
+    window.__liraClearSubscription = function(){ clearSubscription(); return 'cleared'; };
+    window.__liraApplyAppSubscription = applyAppSubscription;
+  }catch(e){}
+
+  var TARIFFS = [
+    {slug:'premium', emoji:'\u2728', title:'Премиум',         price:199,  priceLabel:'199 ₽/мес',  hasSurvey:false, tagline:'Расширенная аналитика без бокса. Без опросника.'},
+    {slug:'basic',   emoji:'\ud83c\udf38', title:'Твой ритм',       price:999,  priceLabel:'999 ₽/мес',  hasSurvey:true,  tagline:'Премиум + ежемесячный бокс заботы под твой профиль.'},
+    {slug:'vip',     emoji:'\ud83d\udc8e', title:'Полная симфония', price:1999, priceLabel:'1999 ₽/мес', hasSurvey:true,  tagline:'Расширенный бокс — органика, чай, гайды, сюрприз.'}
+  ];
+  var TARIFF_BY_TITLE = {};
+  TARIFFS.forEach(function(t){ TARIFF_BY_TITLE[t.title] = t; });
+
+  var SURVEY = [
+    // ---- Step 1/6. Гигиена ----
+    {id:'pads', title:'Прокладки', hint:'Шаг 1/6 · Гигиена. Какие бренды тебе подходят? Можно несколько.', type:'multi', required:false, options:[
+      'Always Ultra Normal', 'Kotex Young Normal', 'Naturella Camomile',
+      'Libresse Invisible', 'Natracare Organic'
+    ], extraText:'Напишу свой бренд'},
+    {id:'tampons', title:'Тампоны', hint:'Шаг 1/6 · Гигиена. Можно несколько.', type:'multi', required:false, options:[
+      'Tampax Compak Normal', 'o.b. ProComfort Mini', 'Kotex Click Super'
+    ], extraText:'Напишу свой бренд'},
+    {id:'other_hygiene', title:'Чаши, трусы и прочее', hint:'Шаг 1/6 · Гигиена. Что используешь ещё?', type:'multi', required:false, options:[
+      'Менструальные чаши', 'Менструальные трусы'
+    ]},
+    {id:'flow_heaviness', title:'Обильность месячных', hint:'Шаг 1/6 · Гигиена.', type:'radio', required:true, options:[
+      'Скудные', 'Средние', 'Обильные', 'Очень обильные', 'По-разному'
+    ]},
+
+    // ---- Step 2/6. Аллергии и кожа ----
+    {id:'allergies', title:'Аллергии', hint:'Шаг 2/6 · Аллергии и кожа. Можно несколько.', type:'multi', required:false, options:[
+      'Шоколад', 'Орехи', 'Глютен', 'Лактоза', 'Эфирные масла', 'Ароматизаторы', 'Латекс'
+    ], extraText:'Другое — напиши свободно'},
+    {id:'sensitive_skin', title:'Чувствительная кожа?', hint:'Шаг 2/6 · Аллергии и кожа.', type:'radio', required:true, options:['Да', 'Нет']},
+    {id:'allergy_notes', title:'Заметки по аллергиям', hint:'Шаг 2/6 · Аллергии и кожа. Если есть уточнения — напиши, иначе пропусти.', type:'text', required:false, placeholder:'Например: не переношу резкие отдушки'},
+
+    // ---- Step 3/6. Образ жизни ----
+    {id:'diet', title:'Питание', hint:'Шаг 3/6 · Образ жизни.', type:'radio', required:true, options:[
+      'Обычное', 'ПП', 'Вегетарианство', 'Веганство', 'Без сахара'
+    ]},
+    {id:'goal', title:'Цель', hint:'Шаг 3/6 · Образ жизни.', type:'radio', required:true, options:[
+      'Худею', 'Поддерживаю', 'Набираю', 'Просто забочусь о себе'
+    ]},
+    {id:'joys', title:'Что тебя радует?', hint:'Шаг 3/6 · Образ жизни. Можно несколько.', type:'multi', required:false, options:[
+      'Сладкое', 'Чай', 'Уход за лицом', 'Уход за телом', 'Мелочи (свечи, носки)', 'Книги'
+    ]},
+    {id:'novelty', title:'Любовь к новинкам', hint:'Шаг 3/6 · Образ жизни. От 1 (люблю проверенное) до 5 (обожаю новинки).', type:'radio', required:true, options:[
+      '1 — люблю проверенное', '2', '3 — серединка', '4', '5 — обожаю новинки'
+    ]},
+    {id:'dislikes', title:'Что не любишь?', hint:'Шаг 3/6 · Образ жизни. Чего точно не класть в бокс.', type:'text', required:false, placeholder:'Например: резкие запахи'},
+
+    // ---- Step 4/6. Глубинные предпочтения ----
+    {id:'favorite_season', title:'Любимый сезон', hint:'Шаг 4/6 · Глубинные предпочтения.', type:'radio', required:true, options:[
+      'Зима', 'Весна', 'Лето', 'Осень'
+    ]},
+    {id:'calming', title:'Что тебя успокаивает?', hint:'Шаг 4/6 · Глубинные предпочтения. Можно несколько.', type:'multi', required:false, options:[
+      'Ванна', 'Чай', 'Тишина', 'Объятия', 'Еда', 'Спорт'
+    ]},
+    {id:'occupation', title:'Род деятельности', hint:'Шаг 4/6 · Глубинные предпочтения.', type:'radio', required:true, options:[
+      'Офис / удалёнка', 'Активная работа', 'Дома / декрет', 'Учусь'
+    ]},
+    {id:'hobbies', title:'Хобби', hint:'Шаг 4/6 · Глубинные предпочтения.', type:'text', required:false, placeholder:'Например: йога, рисование'},
+
+    // ---- Step 5/6. Адрес доставки ----
+    {id:'address', title:'Адрес доставки', hint:'Шаг 5/6 · Куда отправить бокс.', type:'address', required:true},
+
+    // ---- Step 6/6. Промокод (опционально) ----
+    {id:'promo', title:'Промокод', hint:'Шаг 6/6 · Если есть — введи, иначе пропусти. После этого появится оплата.', type:'text', required:false, placeholder:'Например, RHYTHM10'}
+  ];
+
+  var STORAGE_KEY = '@lira/sub-survey/v1';
+
+  function loadDraft(){
+    try{ var raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+  }
+  function saveDraft(state){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+  }
+  function clearDraft(){
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  }
+
+  function makeOrderId(){
+    return 'ord-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7);
+  }
+
+  // ---------------- DOM helpers ----------------
+
+  function el(tag, attrs, children){
+    var node = document.createElement(tag);
+    if(attrs){
+      Object.keys(attrs).forEach(function(k){
+        if(k === 'class') node.className = attrs[k];
+        else if(k === 'text') node.textContent = attrs[k];
+        else if(k === 'html') node.innerHTML = attrs[k];
+        else if(k.indexOf('on') === 0 && typeof attrs[k] === 'function') node.addEventListener(k.slice(2), attrs[k]);
+        else node.setAttribute(k, attrs[k]);
+      });
+    }
+    if(children){
+      (Array.isArray(children) ? children : [children]).forEach(function(c){
+        if(c == null || c === false) return;
+        if(typeof c === 'string') node.appendChild(document.createTextNode(c));
+        else node.appendChild(c);
+      });
+    }
+    return node;
+  }
+  function checkSvg(){
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 10 17 19 8"/></svg>';
+  }
+
+  // ---------------- State ----------------
+
+  var state = null; // { tariff, stepIndex, answers, orderId }
+
+  function questionsForTier(slug){
+    return SURVEY.filter(function(q){ return !q.onlyForTier || q.onlyForTier === slug; });
+  }
+
+  function totalSteps(){
+    if(!state || !state.tariff) return 0;
+    return questionsForTier(state.tariff.slug).length + 1; // +1 = summary
+  }
+
+  function isLastStep(){
+    return state.stepIndex >= questionsForTier(state.tariff.slug).length;
+  }
+
+  function currentQuestion(){
+    var qs = questionsForTier(state.tariff.slug);
+    return qs[state.stepIndex] || null;
+  }
+
+  // ---------------- Validation ----------------
+
+  function isStepValid(){
+    var q = currentQuestion();
+    if(!q) return true; // summary
+    if(!q.required) return true;
+    var a = state.answers[q.id];
+    if(q.type === 'radio' || q.type === 'text') return typeof a === 'string' && a.trim().length > 0;
+    if(q.type === 'multi'){
+      return Array.isArray(a) && a.length > 0;
+    }
+    if(q.type === 'address'){
+      var req = ['name','phone','city','street'];
+      if(!a) return false;
+      for(var i=0;i<req.length;i++){ if(!a[req[i]] || !String(a[req[i]]).trim()) return false; }
+      return true;
+    }
+    return true;
+  }
+
+  // ---------------- Renderers ----------------
+
+  var card;
+  var overlay;
+
+  function clearCard(){ while(card.firstChild) card.removeChild(card.firstChild); }
+
+  function header(){
+    var total = totalSteps();
+    var step = state.stepIndex + 1;
+    var pct = Math.min(100, Math.round((step / total) * 100));
+    var stepText = isLastStep() ? 'Сводка' : ('Шаг ' + step + ' из ' + (total - 1));
+    return el('div',{class:'lira-pay-header'},[
+      el('div',{class:'lira-pay-progress'},[
+        el('div',{class:'lira-pay-progress-fill',style:'width:'+pct+'%'})
+      ]),
+      el('div',{class:'lira-pay-step-text',text:stepText}),
+      el('button',{class:'lira-pay-close','aria-label':'Закрыть',type:'button',onclick:close},['\u00d7'])
+    ]);
+  }
+
+  function footer(){
+    var total = totalSteps();
+    var step = state.stepIndex;
+    var lastStep = isLastStep();
+    var primaryLabel = lastStep ? ('Оплатить ' + state.tariff.price + ' ₽') : 'Дальше';
+    var canProceed = isStepValid();
+    var prevBtn = el('button',{class:'lira-pay-btn lira-pay-btn-secondary',type:'button',onclick:goBack,text: step === 0 ? 'Отмена' : 'Назад'});
+    var nextBtn = el('button',{class:'lira-pay-btn lira-pay-btn-primary',type:'button',text:primaryLabel,onclick: lastStep ? doPay : goNext});
+    if(!canProceed) nextBtn.setAttribute('disabled','disabled');
+    return el('div',{class:'lira-pay-footer'},[prevBtn, nextBtn]);
+  }
+
+  function renderRadio(q){
+    var current = state.answers[q.id] || '';
+    var list = el('div',{class:'lira-pay-options'},
+      q.options.map(function(opt){
+        var active = current === opt;
+        return el('button',{
+          class:'lira-pay-option' + (active ? ' active' : ''),
+          type:'button',
+          onclick: function(){ state.answers[q.id] = opt; saveDraft(state); render(); }
+        },[
+          el('span',{class:'lira-pay-option-mark', html: checkSvg()}),
+          el('span',{text: opt})
+        ]);
+      })
+    );
+    return list;
+  }
+
+  function renderMulti(q){
+    var current = Array.isArray(state.answers[q.id]) ? state.answers[q.id].slice() : [];
+    var list = el('div',{class:'lira-pay-options'},
+      q.options.map(function(opt){
+        var active = current.indexOf(opt) > -1;
+        return el('button',{
+          class:'lira-pay-option checkbox' + (active ? ' active' : ''),
+          type:'button',
+          onclick: function(){
+            var arr = Array.isArray(state.answers[q.id]) ? state.answers[q.id].slice() : [];
+            var idx = arr.indexOf(opt);
+            if(idx > -1) arr.splice(idx,1); else arr.push(opt);
+            state.answers[q.id] = arr;
+            saveDraft(state);
+            render();
+          }
+        },[
+          el('span',{class:'lira-pay-option-mark', html: checkSvg()}),
+          el('span',{text: opt})
+        ]);
+      })
+    );
+    var wrapper = el('div',{},[list]);
+    if(q.extraText){
+      var key = q.id + '_other';
+      var ta = el('textarea',{
+        class:'lira-pay-input lira-pay-textarea',
+        placeholder: q.extraText,
+        oninput: function(e){ state.answers[key] = e.target.value; saveDraft(state); }
+      });
+      ta.value = state.answers[key] || '';
+      wrapper.appendChild(el('div',{class:'lira-pay-extra'},[
+        el('div',{class:'lira-pay-extra-label',text:q.extraText}), ta
+      ]));
+    }
+    return wrapper;
+  }
+
+  function renderText(q){
+    var ta = el('input',{
+      class:'lira-pay-input',
+      type:'text',
+      placeholder: q.placeholder || '',
+      oninput: function(e){ state.answers[q.id] = e.target.value; saveDraft(state); render(true); }
+    });
+    ta.value = state.answers[q.id] || '';
+    setTimeout(function(){ try{ ta.focus(); }catch(e){} },20);
+    return ta;
+  }
+
+  function renderAddress(q){
+    var a = state.answers[q.id] || {};
+    function field(key, placeholder, opts){
+      opts = opts || {};
+      var input = el('input',{
+        class:'lira-pay-input' + (opts.full ? '' : ''),
+        type: opts.type || 'text',
+        placeholder: placeholder,
+        oninput: function(e){
+          var cur = state.answers[q.id] || {};
+          cur[key] = e.target.value;
+          state.answers[q.id] = cur;
+          saveDraft(state);
+          render(true);
+        }
+      });
+      input.value = a[key] || '';
+      var wrap = el('div',{class: opts.full ? 'full' : ''},[input]);
+      return wrap;
+    }
+    return el('div',{class:'lira-pay-fields'},[
+      field('name',     'Имя получателя',           {full:true}),
+      field('phone',    '+7 ___ ___-__-__',         {type:'tel', full:true}),
+      field('city',     'Город'),
+      field('zip',      'Индекс'),
+      field('street',   'Улица, дом',               {full:true}),
+      field('apt',      'Квартира / офис')
+    ]);
+  }
+
+  function renderQuestion(q){
+    var content;
+    if(q.type === 'radio')   content = renderRadio(q);
+    else if(q.type === 'multi')   content = renderMulti(q);
+    else if(q.type === 'text')    content = renderText(q);
+    else if(q.type === 'address') content = renderAddress(q);
+    return el('div',{class:'lira-pay-body'},[
+      el('h2',{class:'lira-pay-title',text: q.title}),
+      q.hint ? el('p',{class:'lira-pay-hint',text: q.hint}) : null,
+      content
+    ]);
+  }
+
+  function formatAnswer(q, value){
+    if(value == null) return '—';
+    if(q.type === 'multi'){
+      var arr = Array.isArray(value) ? value.slice() : [];
+      var extra = state.answers[q.id + '_other'];
+      if(extra && extra.trim()) arr.push('Своё: ' + extra.trim());
+      return arr.length ? arr.join(', ') : '—';
+    }
+    if(q.type === 'address'){
+      var a = value || {};
+      return [a.name, a.phone, [a.zip, a.city].filter(Boolean).join(', '), a.street, a.apt && ('кв./офис ' + a.apt)].filter(Boolean).join('\n');
+    }
+    if(typeof value === 'string') return value.trim() || '—';
+    return String(value);
+  }
+
+  function renderSummary(){
+    var t = state.tariff;
+    var qs = questionsForTier(t.slug);
+    var sections = qs.map(function(q){
+      var v = state.answers[q.id];
+      var text = formatAnswer(q, v);
+      var p = el('p',{text: text});
+      p.style.whiteSpace = 'pre-line';
+      return el('div',{class:'lira-pay-summary-section'},[
+        el('h4',{text: q.title}),
+        p,
+        el('button',{class:'lira-pay-summary-edit',type:'button',text:'Изменить',onclick: function(){ state.stepIndex = qs.indexOf(q); render(); }})
+      ]);
+    });
+    var children = [
+      el('h2',{class:'lira-pay-title',text:'Готово к оплате'}),
+      el('p',{class:'lira-pay-hint',text:'Проверь данные перед оплатой. Их получит наш менеджер вместе с заказом.'}),
+      el('div',{class:'lira-pay-summary'},[
+        el('div',{class:'lira-pay-summary-tier'},[
+          el('div',{class:'lira-pay-summary-emoji',text: t.emoji}),
+          el('div',{},[
+            el('h3',{text: t.title}),
+            el('p',{text: t.tagline})
+          ]),
+          el('div',{class:'lira-pay-summary-price',text: t.priceLabel})
+        ])
+      ].concat(sections)),
+      el('div',{class:'lira-pay-stub-note',text:'⚠️ Тестовый режим: при нажатии «Оплатить» откроется заглушка платёжной страницы. Реальный приём оплаты включится после интеграции с провайдером (URL и ключ помечены как TODO в коде).'})
+    ];
+    return el('div',{class:'lira-pay-body'},children);
+  }
+
+  function renderTierPicker(){
+    var children = [
+      el('h2',{class:'lira-pay-title',text:'Выбери тариф'}),
+      el('p',{class:'lira-pay-hint',text:'Опросник нужен только для боксовых тарифов «Твой ритм» и «Полная симфония».'}),
+      el('div',{class:'lira-pay-tier-list'},
+        TARIFFS.map(function(t){
+          return el('button',{
+            class:'lira-pay-tier-card',
+            type:'button',
+            onclick: function(){ openWizard(t); }
+          },[
+            el('div',{class:'lira-pay-tier-row'},[
+              el('div',{class:'lira-pay-tier-emoji',text:t.emoji}),
+              el('div',{class:'lira-pay-tier-title',text:t.title}),
+              el('div',{class:'lira-pay-tier-price',text:t.priceLabel})
+            ]),
+            el('p',{class:'lira-pay-tier-tagline',text:t.tagline})
+          ]);
+        })
+      )
+    ];
+    return el('div',{class:'lira-pay-body'},children);
+  }
+
+  function tierPickerFooter(){
+    return el('div',{class:'lira-pay-footer'},[
+      el('button',{class:'lira-pay-btn lira-pay-btn-secondary',type:'button',text:'Закрыть',onclick:close})
+    ]);
+  }
+
+  function tierPickerHeader(){
+    return el('div',{class:'lira-pay-header'},[
+      el('div',{class:'lira-pay-progress'},[el('div',{class:'lira-pay-progress-fill',style:'width:0%'})]),
+      el('div',{class:'lira-pay-step-text',text:'Тариф'}),
+      el('button',{class:'lira-pay-close','aria-label':'Закрыть',type:'button',onclick:close},['\u00d7'])
+    ]);
+  }
+
+  // _preserveFocus: skip full re-render when input element has focus and we
+  //   only want to update the disabled state of the Next button.
+  function render(_preserveFocus){
+    if(!card) return;
+    // Stub-чекаут — отдельная ветка, минует опросник/сводку.
+    if(state && state.checkoutPhase){
+      if(_preserveFocus){
+        var oldF = card.querySelector('.lira-pay-footer');
+        var newF = checkoutFooter();
+        if(oldF && newF){ oldF.parentNode.replaceChild(newF, oldF); return; }
+      }
+      renderCheckout();
+      return;
+    }
+    if(_preserveFocus && state && state.tariff){
+      // Only update footer (Next button enabled state)
+      var oldFooter = card.querySelector('.lira-pay-footer');
+      if(oldFooter){
+        var newFooter = footer();
+        oldFooter.parentNode.replaceChild(newFooter, oldFooter);
+        return;
+      }
+    }
+    clearCard();
+    if(!state || !state.tariff){
+      card.appendChild(tierPickerHeader());
+      card.appendChild(renderTierPicker());
+      card.appendChild(tierPickerFooter());
+      return;
+    }
+    card.appendChild(header());
+    if(isLastStep()) card.appendChild(renderSummary());
+    else card.appendChild(renderQuestion(currentQuestion()));
+    card.appendChild(footer());
+  }
+
+  // ---------------- Stub checkout (in-app fake payment) ----------------
+  // Полностью встроенный «чекаут»-заглушка: фейковая форма карты, симуляция
+  // подтверждения и экран «Подписка оформлена». Нужен, чтобы можно было
+  // прокликать оформление целиком до подключения реального провайдера.
+  // Чтобы выключить — поставь USE_STUB_CHECKOUT = false (оплата уйдёт
+  // на buildPaymentUrl() во внешней вкладке).
+
+  function maskCardNumber(num){
+    var s = String(num || '').replace(/\D+/g,'');
+    if(s.length < 4) return s;
+    return '•••• •••• •••• ' + s.slice(-4);
+  }
+  function formatCardNumber(s){
+    s = String(s || '').replace(/\D+/g,'').slice(0,19);
+    return s.replace(/(.{4})/g,'$1 ').trim();
+  }
+  function formatCardExp(s){
+    s = String(s || '').replace(/\D+/g,'').slice(0,4);
+    if(s.length <= 2) return s;
+    return s.slice(0,2) + '/' + s.slice(2);
+  }
+
+  function checkoutHeader(){
+    var t = state.tariff;
+    var label = state.checkoutPhase === 'success' ? 'Готово' :
+                state.checkoutPhase === 'processing' ? 'Оплата…' : 'Оплата';
+    return el('div',{class:'lira-pay-header'},[
+      el('div',{class:'lira-pay-step-text', text: label + (t ? ' · ' + t.title : '')}),
+      el('button',{class:'lira-pay-close','aria-label':'Закрыть',type:'button',onclick:close,
+        style: state.checkoutPhase === 'processing' ? 'visibility:hidden' : ''
+      },['\u00d7'])
+    ]);
+  }
+
+  function renderCheckoutFormBody(){
+    var t = state.tariff;
+    function field(key, label, placeholder, opts){
+      opts = opts || {};
+      var input = el('input',{
+        class:'lira-pay-input',
+        type:'text',
+        inputmode: opts.inputmode || 'text',
+        autocomplete: opts.autocomplete || 'off',
+        placeholder: placeholder,
+        oninput: function(e){
+          var v = e.target.value;
+          if(opts.format === 'card') v = formatCardNumber(v);
+          else if(opts.format === 'exp') v = formatCardExp(v);
+          else if(opts.format === 'cvv') v = String(v).replace(/\D+/g,'').slice(0,4);
+          state.checkout[key] = v;
+          if(v !== e.target.value) e.target.value = v;
+          // Только обновим состояние кнопки «Оплатить» — без полного ре-рендера,
+          // чтобы не сбивать фокус/каретку.
+          var btn = card.querySelector('.lira-pay-checkout-pay');
+          if(btn){
+            if(checkoutFormValid()) btn.removeAttribute('disabled');
+            else btn.setAttribute('disabled','disabled');
+          }
+        }
+      });
+      input.value = state.checkout[key] || '';
+      return el('div',{class:'lira-pay-card-field'},[
+        el('label',{text: label}), input
+      ]);
+    }
+    var form = el('div',{class:'lira-pay-card-form'},[
+      field('cardNumber', 'Номер карты', '4242 4242 4242 4242', {format:'card', inputmode:'numeric', autocomplete:'cc-number'}),
+      field('cardName',   'Держатель',   'TEST USER',           {autocomplete:'cc-name'}),
+      el('div',{class:'lira-pay-card-row'},[
+        field('cardExp', 'MM/YY', '12/29', {format:'exp', inputmode:'numeric', autocomplete:'cc-exp'}),
+        field('cardCvv', 'CVV',   '123',   {format:'cvv', inputmode:'numeric', autocomplete:'cc-csc'})
+      ])
+    ]);
+    return el('div',{class:'lira-pay-body'},[
+      el('h2',{class:'lira-pay-title', text:'Оплата подписки'}),
+      el('p',{class:'lira-pay-hint', text:'Сейчас приложение работает в тестовом режиме. Скоро здесь будет оплата через ЮКассу. Реальные карты не списываются.'}),
+      el('div',{class:'lira-pay-checkout'},[
+        el('div',{class:'lira-pay-checkout-tier'},[
+          el('div',{class:'emoji', text: t.emoji}),
+          el('div',{class:'name', text: t.title}),
+          el('div',{class:'price', text: t.priceLabel})
+        ]),
+        form,
+        el('div',{class:'lira-pay-card-stripe'},[
+          el('div',{},[
+            el('span',{text:'Тестовый режим. '}),
+            el('b',{text:'Реальные карты не списываются.'}),
+            el('span',{text:' Платёжный шлюз (ЮКасса/Тинькофф) подключим, как только оформим юр.лицо.'})
+          ]),
+          el('div',{class:'lira-pay-card-brands'},[
+            el('span',{text:'VISA'}),
+            el('span',{text:'MC'}),
+            el('span',{text:'МИР'})
+          ])
+        ])
+      ])
+    ]);
+  }
+
+  function checkoutFormValid(){
+    if(!state || !state.checkout) return false;
+    var c = state.checkout;
+    var num = String(c.cardNumber||'').replace(/\D+/g,'');
+    if(num.length < 12) return false;
+    if(!String(c.cardName||'').trim()) return false;
+    var exp = String(c.cardExp||'').replace(/\D+/g,'');
+    if(exp.length < 4) return false;
+    var cvv = String(c.cardCvv||'').replace(/\D+/g,'');
+    if(cvv.length < 3) return false;
+    return true;
+  }
+
+  function checkoutFooter(){
+    if(!state || !state.checkoutPhase) return null;
+    if(state.checkoutPhase === 'success'){
+      return el('div',{class:'lira-pay-footer'},[
+        el('button',{class:'lira-pay-btn lira-pay-btn-primary',type:'button',text:'Готово',onclick:function(){
+          try{ close(); }catch(e){}
+          // Перезагружаем страницу, чтобы React-стор перечитал @cycle-tracker/data/v1
+          // и поднял isPremium=true для basic/vip тарифов.
+          try{ window.location.reload(); }catch(e){}
+        }})
+      ]);
+    }
+    if(state.checkoutPhase === 'processing'){
+      var stub = el('button',{class:'lira-pay-btn lira-pay-btn-primary',type:'button',text:'Подтверждаем оплату…'});
+      stub.setAttribute('disabled','disabled');
+      return el('div',{class:'lira-pay-footer'},[stub]);
+    }
+    var pay = el('button',{class:'lira-pay-btn lira-pay-btn-primary lira-pay-checkout-pay',
+      type:'button',
+      text:'Оплатить ' + state.tariff.price + ' ₽',
+      onclick: submitCheckout
+    });
+    if(!checkoutFormValid()) pay.setAttribute('disabled','disabled');
+    var back = el('button',{class:'lira-pay-btn lira-pay-btn-secondary',type:'button',text:'Назад',
+      onclick: function(){
+        // Возврат: для тарифов с опросником — на сводку; для Премиума — закрыть.
+        if(state.tariff && state.tariff.hasSurvey){
+          state.checkoutPhase = null;
+          state.stepIndex = questionsForTier(state.tariff.slug).length; // back to summary
+          render();
+        } else {
+          close();
+        }
+      }
+    });
+    return el('div',{class:'lira-pay-footer'},[back, pay]);
+  }
+
+  function renderCheckoutProcessingBody(){
+    return el('div',{class:'lira-pay-body'},[
+      el('div',{class:'lira-pay-checkout-status'},[
+        el('div',{class:'lira-pay-spinner'}),
+        el('h2',{class:'lira-pay-success-title', text:'Подтверждаем оплату…'}),
+        el('p',{class:'lira-pay-success-text', text: 'Связываемся с банком и активируем подписку «' + state.tariff.title + '».'})
+      ])
+    ]);
+  }
+
+  function renderCheckoutSuccessBody(){
+    var t = state.tariff;
+    var sub = loadSubscription() || {};
+    var paidAt = sub.paidAt ? new Date(sub.paidAt) : new Date();
+    var dateLabel = paidAt.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    return el('div',{class:'lira-pay-body'},[
+      el('div',{class:'lira-pay-checkout-status'},[
+        el('div',{class:'lira-pay-success-circle', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 10 17 19 8"/></svg>'}),
+        el('h2',{class:'lira-pay-success-title', text:'Подписка оформлена'}),
+        el('p',{class:'lira-pay-success-text', text: 'Тариф «' + t.title + '» активирован в тестовом режиме. Реальная оплата подключится после интеграции провайдера.'}),
+        el('div',{class:'lira-pay-success-meta'},[
+          el('div',{class:'row'},[ el('span',{text:'Тариф'}), el('b',{text: t.title}) ]),
+          el('div',{class:'row'},[ el('span',{text:'Сумма'}), el('b',{text: t.price + ' ₽'}) ]),
+          el('div',{class:'row'},[ el('span',{text:'Карта'}), el('b',{text: maskCardNumber(state.checkout && state.checkout.cardNumber)}) ]),
+          el('div',{class:'row'},[ el('span',{text:'Заказ'}), el('b',{text: state.orderId}) ]),
+          el('div',{class:'row'},[ el('span',{text:'Дата'}), el('b',{text: dateLabel}) ])
+        ])
+      ])
+    ]);
+  }
+
+  function renderCheckout(){
+    clearCard();
+    card.appendChild(checkoutHeader());
+    if(state.checkoutPhase === 'processing') card.appendChild(renderCheckoutProcessingBody());
+    else if(state.checkoutPhase === 'success') card.appendChild(renderCheckoutSuccessBody());
+    else card.appendChild(renderCheckoutFormBody());
+    var f = checkoutFooter();
+    if(f) card.appendChild(f);
+  }
+
+  function openStubCheckout(tariff, answers, orderId){
+    overlay.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+    state = {
+      tariff: tariff,
+      answers: answers || {},
+      orderId: orderId || makeOrderId(),
+      checkoutPhase: 'form',
+      checkout: {
+        cardNumber: '4242 4242 4242 4242',
+        cardName: 'TEST USER',
+        cardExp: '12/29',
+        cardCvv: '123'
+      }
+    };
+    renderCheckout();
+  }
+
+  function submitCheckout(){
+    if(!state || !state.checkoutPhase || !checkoutFormValid()) return;
+    state.checkoutPhase = 'processing';
+    renderCheckout();
+    setTimeout(function(){
+      if(!state) return;
+      var rec = {
+        tier: state.tariff.slug,
+        tierTitle: state.tariff.title,
+        price: state.tariff.price,
+        orderId: state.orderId,
+        paidAt: new Date().toISOString(),
+        cardLast4: String((state.checkout && state.checkout.cardNumber) || '').replace(/\D+/g,'').slice(-4),
+        surveyData: state.answers || null,
+        stub: true
+      };
+      saveSubscription(rec);
+      applyAppSubscription(rec);
+      clearDraft();
+      state.checkoutPhase = 'success';
+      renderCheckout();
+    }, 1400);
+  }
+
+  // ---------------- Actions ----------------
+
+  function open(){
+    overlay.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+    state = null;
+    render();
+  }
+
+  function close(){
+    overlay.classList.remove('visible');
+    document.body.style.overflow = '';
+    state = null;
+    clearDraft();
+  }
+
+  function openWizard(tariff){
+    if(!tariff.hasSurvey){
+      // Цифровой тариф (Премиум) — без опросника. Раньше сразу открывали
+      // внешнюю ссылку. Теперь, если включена встроенная заглушка-чекаут
+      // (USE_STUB_CHECKOUT) — открываем её прямо в модалке. Иначе fallback
+      // на реальный buildPaymentUrl() во внешней вкладке.
+      if(USE_STUB_CHECKOUT){
+        openStubCheckout(tariff, {}, makeOrderId());
+        return;
+      }
+      var orderId = makeOrderId();
+      var url = buildPaymentUrl(tariff, {}, orderId);
+      try{ origOpen.call(window, url, '_blank', 'noopener'); }catch(e){}
+      return;
+    }
+    overlay.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+    var draft = loadDraft();
+    if(draft && draft.tariff && draft.tariff.slug === tariff.slug){
+      state = draft;
+    } else {
+      state = { tariff: tariff, stepIndex: 0, answers: {}, orderId: makeOrderId() };
+      saveDraft(state);
+    }
+    render();
+  }
+
+  function goNext(){
+    if(!isStepValid()) return;
+    if(isLastStep()){ doPay(); return; }
+    state.stepIndex++;
+    saveDraft(state);
+    render();
+  }
+
+  function goBack(){
+    if(state.stepIndex === 0){ close(); return; }
+    state.stepIndex--;
+    saveDraft(state);
+    render();
+  }
+
+  function doPay(){
+    if(USE_STUB_CHECKOUT){
+      // Встроенная заглушка: переключаем модалку в режим чекаута,
+      // данные опросника сохраняем — чтобы записать их в подписку.
+      var t = state.tariff;
+      var answers = state.answers;
+      var orderId = state.orderId;
+      openStubCheckout(t, answers, orderId);
+      return;
+    }
+    // Fallback: реальный провайдер во внешней вкладке.
+    var url = buildPaymentUrl(state.tariff, state.answers, state.orderId);
+    try{ window.open(url, '_blank', 'noopener'); }catch(e){}
+    clearDraft();
+    close();
+  }
+
+  // ---------------- In-app info stubs (Мой бокс / Управление / ...) -------
+
+  // Заглушки для не-тарифных Telegram-ссылок: «Открыть Мой бокс»,
+  // «Управление подпиской» и прочее. Раз весь flow теперь внутри
+  // приложения, в Telegram уходить НЕ должны — показываем встроенную
+  // карточку с пояснением.
+  var INFO_STUBS = {
+    mybox: {
+      title: 'Мой бокс',
+      body: 'Здесь появятся данные по доставке твоего бокса:\n• дата ближайшей отправки\n• адрес доставки\n• статус курьера\n\nЕсли подписка только что оформлена — данные обновятся в течение нескольких минут после подтверждения оплаты.'
+    },
+    manage: {
+      title: 'Управление подпиской',
+      body: 'Здесь будет управление активной подпиской: смена тарифа, изменение адреса, пауза и отмена.\n\nСейчас функция в разработке — оплата подключается, и управление подпиской будет встроено сразу после неё.'
+    }
+  };
+  function infoStubFor(slug){
+    if(!slug) return null;
+    if(INFO_STUBS[slug]) return INFO_STUBS[slug];
+    if(slug.indexOf('app_') === 0){
+      return { title: 'Раздел в приложении', body: 'Этот раздел теперь полностью внутри приложения и больше не открывается в Telegram. Если ты ждала здесь информацию — она появится автоматически после оплаты подписки.' };
+    }
+    return { title: 'Раздел в разработке', body: 'Эта функция пока недоступна в приложении. Мы постепенно переносим всё из Telegram-бота сюда.' };
+  }
+  function showInfoStub(slug){
+    var info = infoStubFor(slug);
+    if(!info || !overlay || !card) return;
+    overlay.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+    state = null; // не пересекаемся с опросником
+    clearCard();
+    card.appendChild(el('div',{class:'lira-pay-header'},[
+      el('div',{class:'lira-pay-step-text', text: ''}),
+      el('button',{class:'lira-pay-close','aria-label':'Закрыть',type:'button',onclick:close},['\u00d7'])
+    ]));
+    var body = el('div',{class:'lira-pay-body'});
+    body.appendChild(el('h2',{class:'lira-pay-title', text: info.title}));
+    info.body.split('\n').forEach(function(line){
+      var p = el('p',{style:'margin:0 0 10px 0; line-height:1.5; white-space:pre-wrap; color:#5C4733;', text: line});
+      body.appendChild(p);
+    });
+    card.appendChild(body);
+    card.appendChild(el('div',{class:'lira-pay-footer'},[
+      el('button',{class:'lira-pay-btn lira-pay-btn-primary',type:'button',text:'Понятно',onclick:close})
+    ]));
+  }
+
+  // ---------------- Hooks into existing app ----------------
+
+  // The bundle opens https://t.me/<bot>?start=<slug> in a new tab via
+  // window.open() when the user taps the per-tariff CTA, the "Открыть
+  // Мой бокс" / "Управление подпиской" buttons and similar. We wrap
+  // window.open so we can intercept ALL such calls and surface our own
+  // встроенный flow instead — иначе пользователя выбрасывает в Telegram.
+  var TIER_BY_SLUG = {};
+  TARIFFS.forEach(function(t){ TIER_BY_SLUG[t.slug] = t; });
+
+  function slugFromUrl(url){
+    if(typeof url !== 'string') return null;
+    var m = url.match(/^https?:\/\/t\.me\/[^\/?]+\?start=([A-Za-z0-9_\-]+)/i);
+    if(!m) return null;
+    return decodeURIComponent(m[1]).toLowerCase();
+  }
+  function tariffFromUrl(url){
+    var slug = slugFromUrl(url);
+    if(!slug) return null;
+    return TIER_BY_SLUG[slug] || null;
+  }
+
+  var origOpen = window.open;
+  window.open = function(url){
+    var slug = slugFromUrl(url);
+    if(slug){
+      var t = TIER_BY_SLUG[slug];
+      if(t){
+        // Если уже есть активная подписка на этот же тариф — не открываем
+        // повторный чекаут, а показываем «Управление» (плашка над
+        // карточкой тарифа уже стоит «Активна»).
+        var activeRec = loadSubscription();
+        if(activeRec && activeRec.tier === t.slug){
+          setTimeout(function(){ showInfoStub('manage'); }, 0);
+          return null;
+        }
+        if(!t.hasSurvey){
+          // Цифровой тариф (Премиум). Раньше синхронно открывали внешнюю
+          // платёжку; теперь, если включена встроенная заглушка, показываем
+          // её прямо в модалке — без ухода в новую вкладку.
+          if(USE_STUB_CHECKOUT){
+            setTimeout(function(){ openStubCheckout(t, {}, makeOrderId()); }, 0);
+            return null;
+          }
+          var orderId = makeOrderId();
+          var payUrl = buildPaymentUrl(t, {}, orderId);
+          return origOpen.call(window, payUrl, '_blank', 'noopener');
+        }
+        // Тарифы с опросником: показываем модалку асинхронно, чтобы не
+        // мешать синхронному onPress.
+        setTimeout(function(){ openWizard(t); }, 0);
+        return null;
+      }
+      // Не тариф — это «Мой бокс», «Управление» и т.п. В Telegram
+      // переходить НЕ должны: показываем встроенную инфо-карточку.
+      setTimeout(function(){ showInfoStub(slug); }, 0);
+      return null;
+    }
+    return origOpen.apply(window, arguments);
+  };
+  // Also wrap window.location assignments for safety (some webview shims
+  // navigate the page directly when the URL begins with `tel:` etc., but
+  // the Telegram links go through window.open above, so this is just a
+  // safety net for unexpected setups). We do NOT redirect tel:, mailto:,
+  // or anything outside the t.me/<bot>?start= pattern.
+
+  // Скрываем встроенный блок «Уже есть код активации?» / «Already paid /
+  // have an activation code» на экране подписки — раз оплата теперь
+  // встроенная, активационный код больше не выдаётся, и блок только сбивает.
+  // А также параграф-подзаголовок про оформление через Telegram.
+  var HIDE_TEXT_RES = [
+    /Уже оплатил[аи]?\s+в\s+Telegram/i,
+    /Already paid (?:in|via) Telegram/i,
+    /Уже есть код активаци/i,
+    /Already have an activation code/i
+  ];
+  // Match the FULL phrase from the bundle (title + hint + button) so we can
+  // confidently identify the smallest ancestor that still contains the entire
+  // block, without accidentally swallowing the rest of the screen.
+  var HIDE_BLOCK_FULL_RE = /(?:Уже оплатил[аи]?\s+в\s+Telegram[\s\S]*Синхронизаци|Already paid (?:in|via) Telegram[\s\S]*Sync|Уже есть код активаци[\s\S]*Активир|Already have an activation code[\s\S]*Activate)/i;
+  function findHideContainer(textNode){
+    // Walk up until we find the SMALLEST ancestor whose textContent contains
+    // the entire block (title + button). That ancestor is the card we want
+    // to hide — going up further would also hide neighbouring sections.
+    var node = textNode && textNode.parentElement ? textNode.parentElement : null;
+    while(node && node !== document.body){
+      if(HIDE_BLOCK_FULL_RE.test(node.textContent || '')) return node;
+      node = node.parentElement;
+    }
+    return null;
+  }
+  function hideTelegramOnlyBits(){
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    var nodes = [];
+    var n;
+    while((n = walker.nextNode())){
+      var t = (n.nodeValue || '').trim();
+      if(!t || t.length > 200) continue;
+      for(var i=0;i<HIDE_TEXT_RES.length;i++){
+        if(HIDE_TEXT_RES[i].test(t)){ nodes.push(n); break; }
+      }
+    }
+    nodes.forEach(function(textNode){
+      var box = findHideContainer(textNode);
+      if(box && !box.dataset.liraHidden){
+        box.dataset.liraHidden = '1';
+        box.style.display = 'none';
+      }
+    });
+  }
+  // Прячем плашки-бейджи на карточках тарифов: «Цифровой» (Премиум) и
+  // «Максимум» (Полная симфония). Плашка-pill — это непосредственный
+  // родитель текстового узла, у него border-radius 999px.
+  var HIDE_BADGES = ['Цифровой','Максимум','Digital','Maximum','Популярный','Популярная','Popular'];
+  function hideTariffBadges(){
+    var leaves = document.querySelectorAll('div');
+    for(var i=0;i<leaves.length;i++){
+      var el = leaves[i];
+      if(el.children.length !== 0) continue;
+      var t = (el.textContent || '').trim();
+      if(HIDE_BADGES.indexOf(t) === -1) continue;
+      var pill = el.parentElement;
+      if(!pill || pill.dataset.liraHidden) continue;
+      var cs = window.getComputedStyle(pill);
+      var br = parseFloat(cs.borderRadius);
+      // pill-shaped (round corners) и небольшая ширина — это бейдж.
+      if(br >= 50 || cs.borderRadius === '999px'){
+        pill.dataset.liraHidden = '1';
+        pill.style.display = 'none';
+      }
+    }
+  }
+  // ---------------- «Мой бокс активен» panel + active-card swap -----------
+  //
+  // После оплаты в localStorage появляется запись @lira/subscription/v1.
+  // На вкладке «Box» (= Подписка) рендерим над карточками тарифов панель
+  // «Мой бокс активен» с тарифом, датой, заказом и составом бокса (на
+  // основе ответов опросника). На карточке активного тарифа кнопку
+  // «Оформить за …» подменяем оверлеем «Активна»; повторный клик по ней
+  // открывает заглушку «Управление» вместо нового чекаута. Кнопка
+  // «Сменить тариф» в панели чистит запись и возвращает исходные кнопки.
+
+  function fmtPaidDate(iso){
+    if(!iso) return '';
+    try {
+      var d = new Date(iso);
+      var pad = function(n){ return n < 10 ? '0' + n : '' + n; };
+      return pad(d.getDate()) + '.' + pad(d.getMonth()+1) + '.' + d.getFullYear() +
+             ', ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    } catch(e){ return ''; }
+  }
+  // Defensive: некоторые input-events во встроенном бандле сохраняют ввод как
+  // литеральные `\uXXXX` строки вместо настоящих юникод-символов. Прогоняем
+  // отображаемые значения через unescape, чтобы баннер «Мой бокс» оставался
+  // читаемым независимо от того, как именно бандл записал поля.
+  function unescapeUnicode(s){
+    if(typeof s !== 'string') return s;
+    if(s.indexOf('\\u') < 0) return s;
+    return s.replace(/\\u([0-9a-fA-F]{4})/g, function(_, hex){
+      return String.fromCharCode(parseInt(hex, 16));
+    });
+  }
+  function fmtAddress(a){
+    if(!a || typeof a !== 'object') return '';
+    var parts = [];
+    if(a.city)   parts.push(unescapeUnicode(String(a.city)));
+    if(a.street) parts.push(unescapeUnicode(String(a.street)));
+    if(a.name)   parts.push(unescapeUnicode(String(a.name)));
+    if(a.phone)  parts.push(unescapeUnicode(String(a.phone)));
+    return parts.filter(function(s){ return s && s.trim(); }).join(', ');
+  }
+  function answerToString(q, val){
+    if(val == null || val === '') return null;
+    if(q.type === 'multi'){
+      if(!Array.isArray(val) || !val.length) return null;
+      return val.map(function(v){ return unescapeUnicode(String(v)); }).join(', ');
+    }
+    if(q.type === 'radio' || q.type === 'text'){
+      var s = unescapeUnicode(String(val).trim());
+      return s || null;
+    }
+    if(q.type === 'address'){
+      var s2 = fmtAddress(val);
+      return s2 || null;
+    }
+    return null;
+  }
+  function boxRowsFor(rec){
+    if(!rec || !rec.surveyData) return [];
+    var qs = SURVEY.filter(function(q){
+      return !q.onlyForTier || q.onlyForTier === rec.tier;
+    });
+    var rows = [];
+    qs.forEach(function(q){
+      var v = answerToString(q, rec.surveyData[q.id]);
+      if(v != null){ rows.push({ id: q.id, label: q.title, value: v }); }
+    });
+    return rows;
+  }
+
+  var BANNER_ID = 'lira-mybox-banner';
+
+  function buildMyBoxBanner(rec){
+    var tariff = TARIFFS.find(function(t){ return t.slug === rec.tier; }) || null;
+    var hasSurvey = !!(tariff && tariff.hasSurvey);
+    var rows = boxRowsFor(rec);
+    var contentRows = rows.filter(function(r){ return r.id !== 'address' && r.id !== 'promo'; });
+    var addressRow  = rows.find(function(r){ return r.id === 'address'; });
+    var promoRow    = rows.find(function(r){ return r.id === 'promo'; });
+
+    var H = function(text, mt){
+      return el('div', { style: 'font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#9C7C5E; margin:'+(mt||0)+'px 0 6px 0;', text: text });
+    };
+    var ROW = function(label, value){
+      return el('div', { style: 'display:flex; flex-direction:column; gap:2px; padding:7px 0; border-bottom:1px solid rgba(217,197,170,0.5);' }, [
+        el('span', { style: 'font-size:11px; color:#A38566;', text: label }),
+        el('span', { style: 'font-size:14px; color:#3F2A18; line-height:1.4;', text: value })
+      ]);
+    };
+
+    var children = [];
+    children.push(el('div', { style: 'display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:rgba(255,255,255,0.55); margin-bottom:10px;' }, [
+      el('span', { style: 'font-size:13px; color:#7C5A3F;', text: '\u2713' }),
+      el('span', { style: 'font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#7C5A3F;', text: 'Мой бокс активен' })
+    ]));
+    children.push(el('div', { style: 'font-size:22px; font-weight:700; color:#3F2A18; margin-bottom:2px;', text: (tariff ? tariff.title : (rec.tierTitle || rec.tier || 'Подписка')) }));
+    var subBits = [];
+    if(rec.price) subBits.push(rec.price + ' \u20bd/мес');
+    if(rec.paidAt) subBits.push('Оплачено ' + fmtPaidDate(rec.paidAt));
+    if(rec.orderId) subBits.push('Заказ ' + rec.orderId);
+    children.push(el('div', { style: 'font-size:12px; color:#7C5A3F; margin-bottom:14px; line-height:1.4;', text: subBits.join('  \u00b7  ') }));
+
+    if(hasSurvey){
+      // «Состав бокса» намеренно не показываем — пользователь попросил
+      // оставить только заголовок, реквизиты и доставку. Ответы
+      // опросника всё равно хранятся в localStorage (rec.surveyData) и
+      // доступны через window.__liraGetSubscription() для QA.
+      void contentRows;
+      if(addressRow){
+        children.push(H('Доставка'));
+        children.push(ROW('Адрес', addressRow.value));
+      }
+      if(promoRow){
+        children.push(H('Промокод', 14));
+        children.push(ROW('Код', promoRow.value));
+      }
+    } else {
+      children.push(H('Что включено'));
+      var feats = [
+        'Графики температуры и симптомов',
+        'Детальный прогноз овуляции',
+        'Экспорт циклов в PDF / CSV',
+        'Персональные гайды и статьи'
+      ];
+      var box2 = el('div', {});
+      feats.forEach(function(f){
+        box2.appendChild(el('div', { style: 'display:flex; align-items:flex-start; gap:8px; padding:5px 0;' }, [
+          el('span', { style: 'color:#9C7C5E; flex-shrink:0; font-weight:700;', text: '\u00b7' }),
+          el('span', { style: 'font-size:14px; color:#3F2A18; line-height:1.4;', text: f })
+        ]));
+      });
+      children.push(box2);
+    }
+
+    children.push(el('div', { style: 'display:flex; gap:10px; margin-top:14px;' }, [
+      el('button', { type:'button', style: 'flex:1; padding:11px 12px; border-radius:14px; border:none; background:#B98864; color:#FFFCF7; font-size:14px; font-weight:600; cursor:pointer;', text: 'Управление', onclick: function(){ showInfoStub('manage'); } }),
+      el('button', { type:'button', style: 'flex:1; padding:11px 12px; border-radius:14px; border:1px solid #D9C5AA; background:transparent; color:#7C5A3F; font-size:14px; font-weight:600; cursor:pointer;', text: 'Сменить тариф', onclick: function(){
+        try { if(typeof window.confirm === 'function' && !window.confirm('Удалить активную подписку и вернуться к выбору тарифа?')) return; } catch(e){}
+        clearSubscription();
+        var existing = document.getElementById(BANNER_ID);
+        if(existing && existing.parentNode) existing.parentNode.removeChild(existing);
+        restoreActiveTariffButtons();
+      } })
+    ]));
+
+    return el('div', {
+      id: BANNER_ID,
+      style: 'box-sizing:border-box; width:100%; margin:0 0 16px 0; padding:18px; border-radius:18px; background:linear-gradient(180deg,#FFF2DD 0%,#FFE3C2 100%); box-shadow:0 6px 20px rgba(142,111,88,0.18); color:#3F2A18;'
+    }, children);
+  }
+
+  function findSubscriptionAnchor(){
+    // Insert above «Тарифы» subtitle if found.
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    var n;
+    while((n = walker.nextNode())){
+      var t = (n.nodeValue || '').trim();
+      if(t !== 'Тарифы' && t !== 'Tariffs') continue;
+      var p = n.parentElement;
+      while(p && p !== document.body){
+        if(p.parentElement && p.parentElement !== document.body) return p;
+        p = p.parentElement;
+      }
+    }
+    // Fallback: above the first tariff card.
+    return findCardByTitle('Премиум');
+  }
+
+  function findCardByTitle(title){
+    if(!title) return null;
+    var leaves = document.querySelectorAll('div');
+    for(var i=0;i<leaves.length;i++){
+      var d = leaves[i];
+      if(d.children.length !== 0) continue;
+      if((d.textContent || '').trim() !== title) continue;
+      // Skip leaves that live INSIDE our own «Мой бокс» banner — иначе
+      // findCardByTitle('Премиум') нашёл бы заголовок банера, а не карточку
+      // тарифа.
+      if(d.closest && d.closest('#'+BANNER_ID)) continue;
+      var cur = d.parentElement;
+      while(cur && cur !== document.body){
+        if(cur.id === BANNER_ID) break;
+        var cs = window.getComputedStyle(cur);
+        var br = parseFloat(cs.borderRadius);
+        if(br >= 16 && cur.offsetWidth >= 200) return cur;
+        cur = cur.parentElement;
+      }
+      if(d.parentElement && d.parentElement.id !== BANNER_ID) return d.parentElement;
+    }
+    return null;
+  }
+
+  function enforceActiveSwap(n, label){
+    var kids = Array.prototype.slice.call(n.childNodes);
+    kids.forEach(function(c){
+      if(c.nodeType === 1){
+        if(c.dataset && c.dataset.liraActiveLabel === '1') return;
+        if(c.style.display !== 'none'){
+          c.dataset.liraHiddenByActive = '1';
+          c.style.display = 'none';
+        }
+      } else if(c.nodeType === 3){
+        if(c.nodeValue) c.nodeValue = '';
+      }
+    });
+    if(!n.querySelector('[data-lira-active-label="1"]')){
+      var ov = document.createElement('div');
+      ov.dataset.liraActiveLabel = '1';
+      ov.style.cssText = 'display:flex; align-items:center; justify-content:center; width:100%; padding:12px 16px; font-size:14px; font-weight:700; letter-spacing:0.04em; color:inherit;';
+      ov.textContent = label;
+      n.appendChild(ov);
+    }
+    n.style.cursor = 'default';
+    n.style.opacity = '0.85';
+  }
+
+  function transformActiveTariffButton(card, label){
+    if(!card) return;
+    var existing = card.querySelector('[data-lira-active-swapped="1"]');
+    if(existing){ enforceActiveSwap(existing, label); return; }
+    var nodes = card.querySelectorAll('div, span, a, button');
+    for(var i=0;i<nodes.length;i++){
+      var t = (nodes[i].textContent || '').trim();
+      if(!/^Оформить за\s/.test(t) && !/^Subscribe for\s/.test(t)) continue;
+      var n = nodes[i];
+      while(n.parentElement && n.parentElement !== card &&
+            (n.parentElement.textContent || '').trim() === t){
+        n = n.parentElement;
+      }
+      n.dataset.liraActiveSwapped = '1';
+      n.dataset.liraOriginalText = t;
+      enforceActiveSwap(n, label);
+      return;
+    }
+  }
+
+  function restoreActiveTariffButtons(){
+    var swapped = document.querySelectorAll('[data-lira-active-swapped="1"]');
+    for(var i=0;i<swapped.length;i++){
+      var n = swapped[i];
+      delete n.dataset.liraActiveSwapped;
+      delete n.dataset.liraOriginalText;
+      n.style.cursor = '';
+      n.style.opacity = '';
+      var ov = n.querySelector('[data-lira-active-label="1"]');
+      if(ov && ov.parentNode === n) n.removeChild(ov);
+      var hidden = n.querySelectorAll('[data-lira-hidden-by-active="1"]');
+      for(var j=0;j<hidden.length;j++){
+        hidden[j].style.display = '';
+        delete hidden[j].dataset.liraHiddenByActive;
+      }
+    }
+  }
+
+  // ---- Скрываем нижнюю карточку «Мой бокс» от бандла ---------------
+  //
+  // На экране Подписки бандл рисует под карточками тарифов блок
+  // «Мой бокс» с заглушкой «Уже оформила подписку с боксом?» и кнопкой
+  // «Открыть «Мой бокс»». Он дублирует наш верхний баннер и
+  // пользователь просит его убрать.
+  function hideBottomMyBoxCard(){
+    var leaves = document.querySelectorAll('div, span');
+    for(var i=0;i<leaves.length;i++){
+      var d = leaves[i];
+      if(d.children && d.children.length !== 0) continue;
+      if((d.textContent || '').trim() !== 'Открыть «Мой бокс»') continue;
+      if(d.closest && d.closest('#'+BANNER_ID)) continue;
+      var cur = d.parentElement;
+      while(cur && cur !== document.body){
+        if(cur.id === BANNER_ID) break;
+        if(cur.dataset && cur.dataset.liraBottomMyboxHidden === '1') return;
+        var cs = window.getComputedStyle(cur);
+        var br = parseFloat(cs.borderRadius);
+        var tc = (cur.textContent || '').trim();
+        if(br >= 16 && cur.offsetWidth >= 200 && tc.length > 80 && tc.length < 600){
+          cur.dataset.liraBottomMyboxHidden = '1';
+          cur.style.display = 'none';
+          return;
+        }
+        cur = cur.parentElement;
+      }
+      return;
+    }
+  }
+
+  function maintainMyBoxBanner(){
+    var rec = loadSubscription();
+    var existing = document.getElementById(BANNER_ID);
+    if(!rec){
+      if(existing && existing.parentNode) existing.parentNode.removeChild(existing);
+      restoreActiveTariffButtons();
+      return;
+    }
+    var anchor = findSubscriptionAnchor();
+    if(!anchor){
+      // Не на экране Подписки — снимаем баннер если он залип.
+      if(existing && existing.parentNode) existing.parentNode.removeChild(existing);
+      return;
+    }
+    if(!existing){
+      var banner = buildMyBoxBanner(rec);
+      anchor.parentNode.insertBefore(banner, anchor);
+    }
+    var activeTitle = (TARIFFS.find(function(t){ return t.slug === rec.tier; }) || {}).title || rec.tierTitle;
+    var activeCard = findCardByTitle(activeTitle);
+    transformActiveTariffButton(activeCard, 'Активна');
+  }
+
+  // ---------------- Перестановка вкладок в нижнем таб-баре ----------------
+  //
+  // Пользователю нужен порядок: Today | Calendar | Lira | Box | Stats
+  // (RU: Сегодня · Календарь · Лира · Подписка · Статистика).
+  // Бандл рендерит таб-бар в естественном порядке (Today/Calendar/Stats/
+  // Lira/Box). Меняем визуальный порядок через CSS `order` на flex-детях
+  // таб-бара — без правок минифицированного бандла.
+  var TAB_ORDER = { 'Today':0, 'Calendar':1, 'Lira':2, 'Box':3, 'Stats':4 };
+
+  function reorderTabs(){
+    // Ищем все листовые элементы с текстом "Today" — для каждого пробуем
+    // подняться до родителя, чьи прямые дети содержат >=3 известных табов.
+    // Это надёжнее offsetParent-проверки, т.к. таб-бар в RN-Web часто
+    // position:fixed (тогда offsetParent === null).
+    var leaves = document.querySelectorAll('div, span, a');
+    var tabBar = null;
+    for(var i=0;i<leaves.length;i++){
+      var d = leaves[i];
+      if(d.children && d.children.length !== 0) continue;
+      if((d.textContent || '').trim() !== 'Today') continue;
+      var n = d;
+      while(n.parentElement && n.parentElement !== document.body &&
+            (n.parentElement.textContent || '').trim() === 'Today'){
+        n = n.parentElement;
+      }
+      var par = n.parentElement;
+      if(!par) continue;
+      var matches = 0;
+      for(var j=0;j<par.children.length;j++){
+        var ct = (par.children[j].textContent || '').trim();
+        if(TAB_ORDER.hasOwnProperty(ct)){ matches++; }
+      }
+      if(matches >= 3){ tabBar = par; break; }
+    }
+    if(!tabBar) return;
+
+    // Если контейнер flex — двигаем CSS `order`. Иначе — физически
+    // переставляем детей через appendChild в нужном порядке.
+    var cs = window.getComputedStyle(tabBar);
+    var isFlex = cs.display === 'flex' || cs.display === 'inline-flex';
+    if(isFlex){
+      for(var k=0;k<tabBar.children.length;k++){
+        var ch = tabBar.children[k];
+        var label = (ch.textContent || '').trim();
+        if(!TAB_ORDER.hasOwnProperty(label)) continue;
+        var ord = String(TAB_ORDER[label]);
+        if(ch.style.order !== ord){ ch.style.order = ord; }
+      }
+      return;
+    }
+    // Non-flex fallback: физически перебираем children и переставляем.
+    var ordered = Array.prototype.slice.call(tabBar.children).map(function(c, idx){
+      var label = (c.textContent || '').trim();
+      var rank = TAB_ORDER.hasOwnProperty(label) ? TAB_ORDER[label] : (100 + idx);
+      return { el: c, rank: rank };
+    });
+    ordered.sort(function(a, b){ return a.rank - b.rank; });
+    // Сравниваем с текущим порядком — если совпадает, ничего не делаем.
+    var currentChildren = Array.prototype.slice.call(tabBar.children);
+    var desiredEls = ordered.map(function(o){ return o.el; });
+    var same = currentChildren.length === desiredEls.length &&
+      currentChildren.every(function(el, idx){ return el === desiredEls[idx]; });
+    if(same) return;
+    desiredEls.forEach(function(el){ tabBar.appendChild(el); });
+  }
+
+  // Run periodically: the React tree re-renders, and a MutationObserver may
+  // miss the text mount on first paint depending on timing. A short interval
+  // keeps it cheap and reliable across renders/locale switches.
+  setInterval(function(){ hideTelegramOnlyBits(); hideTariffBadges(); maintainMyBoxBanner(); hideBottomMyBoxCard(); reorderTabs(); }, 500);
+
+  // Belt-and-suspenders: also intercept clicks at the DOM level. Useful if
+  // a future bundle uses a real <a href="t.me/..."> instead of window.open.
+  var SUB_TEXT_RE = /^(?:Оформить за|Subscribe for|Subscribe via Telegram|Оформить через Telegram|Оформить подписку|View plans)\b/;
+
+  function findSubscribeTarget(eventTarget){
+    var node = eventTarget;
+    while(node && node !== document.body){
+      var txt = (node.textContent || '').trim();
+      if(txt && txt.length < 60 && SUB_TEXT_RE.test(txt)) return node;
+      node = node.parentElement;
+    }
+    return null;
+  }
+  function detectTariffForTarget(node){
+    var cur = node;
+    var depth = 0;
+    while(cur && cur !== document.body && depth < 12){
+      var txt = cur.textContent || '';
+      var found = null;
+      var matches = 0;
+      Object.keys(TARIFF_BY_TITLE).forEach(function(title){
+        if(txt.indexOf(title) > -1){ matches++; found = TARIFF_BY_TITLE[title]; }
+      });
+      if(matches === 1) return found;
+      cur = cur.parentElement; depth++;
+    }
+    return null;
+  }
+  document.addEventListener('click', function(ev){
+    var target = findSubscribeTarget(ev.target);
+    if(!target) return;
+    var anchor = target.tagName === 'A' ? target : target.querySelector && target.querySelector('a[href]');
+    if(anchor && anchor.href){
+      ev.preventDefault();
+      ev.stopPropagation();
+      var tariff = tariffFromUrl(anchor.href) || detectTariffForTarget(target);
+      if(tariff){
+        var rec = loadSubscription();
+        if(rec && rec.tier === tariff.slug){ showInfoStub('manage'); }
+        else { openWizard(tariff); }
+      } else { open(); }
+    }
+    // If there is no anchor, the bundle uses window.open — our wrapper
+    // above takes care of the redirect.
+  }, true);
+
+  // Initialise references once DOM is ready.
+  function init(){
+    overlay = document.getElementById('lira-pay-overlay');
+    card = document.getElementById('lira-pay-card');
+    if(!overlay || !card) return;
+    overlay.addEventListener('click', function(ev){ if(ev.target === overlay) close(); });
+    document.addEventListener('keydown', function(ev){
+      if(ev.key === 'Escape' && overlay.classList.contains('visible')) close();
+    });
+    // Expose for manual triggering (e.g. from console).
+    window.__liraOpenSubscribe = function(slug){
+      var t = TARIFFS.find(function(x){ return x.slug === slug; });
+      if(t){ open(); openWizard(t); }
+      else { open(); }
+    };
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+<!-- LIRA_PAY_INJECTED -->
+
+
+
+<!--
+  Backend redirector + onboarding webhook for the Lira web app.
+
+  1) Chat redirector: the bundled chat UI talks to
+     `${syncApiBaseUrl()}/v1/lira/{status,chat}`. `syncApiBaseUrl()` falls back
+     to a dead serveo tunnel, so the chat would always 404. We monkey-patch
+     `window.fetch` and rewrite any request whose path is
+     `/v1/lira/{status,chat}` to our Fly.io backend.
+
+  2) Onboarding webhook: the bundled onboarding writes the full state object
+     (profile, cycle settings, period logs, shipping address, etc.) to
+     localStorage under `@cycle-tracker/data/v1` with `onboardingDone:true`
+     when the user finishes the questionnaire. We watch for that flip and
+     POST the data to `/v1/lira/onboarding`, which forwards a formatted
+     summary to the owner's Telegram.
+
+  The Fly.io backend (lira-backend on fly.dev) wraps Pollinations.ai for
+  the chat (free, no-API-key, OpenAI-compatible) and Telegram Bot API for
+  the onboarding notification. That keeps the product zero-friction: any
+  user opens the link from Instagram and chats immediately, no flags, no
+  signup, no waiting for a model to download.
+-->
+<script id="lira-llm-script">
+/* Lira chat backend redirector + onboarding webhook.
+   See lira-webllm-inject.html in scripts/ for the source-of-truth copy. */
+(function(){
+  'use strict';
+  var BACKEND = '';  // same-origin: nginx proxies /v1/lira/* to local FastAPI
+  var LIRA_PATH_RE = /\/v1\/lira\/(status|chat)(?:\?[^\s]*)?$/;
+  var STORAGE_KEY = '@cycle-tracker/data/v1';
+  var DEVICE_KEY = '@lira/sync/device-id/v1';
+  var NOTIFY_KEY = '@lira/onboarding-notified/v1';
+
+  if (!window.fetch || window.__liraBackendRoutingInstalled) return;
+  window.__liraBackendRoutingInstalled = true;
+  window.__liraBackend = { url: BACKEND };
+
+  var nativeFetch = window.fetch.bind(window);
+
+  function getUrl(input){
+    if (typeof input === 'string') return input;
+    if (input && typeof input.url === 'string') return input.url;
+    try { return String(input); } catch (_) { return ''; }
+  }
+  function rewrite(url){
+    var match = LIRA_PATH_RE.exec(url || '');
+    if (!match) return null;
+    return BACKEND + '/v1/lira/' + match[1] + (match[0].indexOf('?') >= 0 ? match[0].substring(match[0].indexOf('?')) : '');
+  }
+  function cloneRequestWithUrl(req, newUrl){
+    return new Request(newUrl, {
+      method: req.method,
+      headers: req.headers,
+      body: (req.method === 'GET' || req.method === 'HEAD') ? undefined : req.clone().body,
+      mode: 'cors',
+      credentials: 'omit',
+      cache: req.cache,
+      redirect: req.redirect,
+      referrer: req.referrer,
+      integrity: req.integrity
+    });
+  }
+
+  window.fetch = function(input, init){
+    try {
+      var url = getUrl(input);
+      var newUrl = rewrite(url);
+      if (!newUrl) return nativeFetch(input, init);
+      if (typeof input === 'string') {
+        var nextInit = Object.assign({}, init || {});
+        nextInit.mode = 'cors';
+        nextInit.credentials = 'omit';
+        return nativeFetch(newUrl, nextInit);
+      }
+      if (typeof Request === 'function' && input instanceof Request) {
+        return nativeFetch(cloneRequestWithUrl(input, newUrl), init);
+      }
+      return nativeFetch(newUrl, init);
+    } catch (_) {
+      return nativeFetch(input, init);
+    }
+  };
+
+  // ---------- Onboarding webhook ----------
+
+  function safeRead(key){
+    try {
+      var raw = window.localStorage.getItem(key);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (_) { return null; }
+  }
+  function readDeviceId(){
+    try {
+      var raw = window.localStorage.getItem(DEVICE_KEY);
+      return (typeof raw === 'string' && raw.length >= 6) ? raw : null;
+    } catch (_) { return null; }
+  }
+  function phaseFromCycleDay(day, cycleLength, periodLength){
+    if (!day || !cycleLength) return null;
+    if (day <= (periodLength || 5)) return 'menstrual';
+    var ovStart = Math.max(1, Math.round(cycleLength / 2) - 1);
+    var ovEnd = ovStart + 2;
+    if (day < ovStart) return 'follicular';
+    if (day <= ovEnd) return 'ovulation';
+    return 'luteal';
+  }
+  function computeCycleDay(logs, cycleLength){
+    if (!logs || typeof logs !== 'object') return null;
+    var days = [];
+    Object.keys(logs).forEach(function(k){
+      var entry = logs[k];
+      if (!entry || typeof entry !== 'object') return;
+      var flow = entry.flow;
+      if (!flow || flow === 'none') return;
+      days.push(k);
+    });
+    if (!days.length) return null;
+    days.sort();
+    var lastStart = null;
+    for (var i = days.length - 1; i >= 0; i--) {
+      if (i === 0 || (new Date(days[i]) - new Date(days[i-1])) > 86400000 * 1.5) {
+        lastStart = days[i];
+        break;
+      }
+    }
+    if (!lastStart) return null;
+    var diff = Math.floor((Date.now() - new Date(lastStart).getTime()) / 86400000) + 1;
+    if (cycleLength && diff > cycleLength) {
+      diff = ((diff - 1) % cycleLength) + 1;
+    }
+    return diff;
+  }
+  var notifyInFlight = false;
+  function postOnboarding(state){
+    try {
+      var profile = (state && state.profile) || {};
+      var settings = (state && state.settings) || {};
+      var cycleDay = computeCycleDay(state && state.logs, settings.averageCycleLength);
+      var phase = phaseFromCycleDay(cycleDay, settings.averageCycleLength, settings.averagePeriodLength);
+      var payload = {
+        device_id: readDeviceId(),
+        user_agent: (navigator && navigator.userAgent) || null,
+        locale: (navigator && (navigator.language || (navigator.languages && navigator.languages[0]))) || null,
+        timezone: (function(){ try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (_) { return null; } })(),
+        profile: { name: profile.name || null, birthdate: profile.birthdate || null },
+        settings: {
+          averageCycleLength: settings.averageCycleLength || null,
+          averagePeriodLength: settings.averagePeriodLength || null,
+          lutealPhaseLength: settings.lutealPhaseLength || null,
+          language: settings.language || null
+        },
+        shippingAddress: (state && state.shippingAddress) || null,
+        boxProfile: (state && state.boxProfile) || null,
+        logs: (state && state.logs) || {},
+        cycle_day: cycleDay,
+        phase: phase
+      };
+      nativeFetch(BACKEND + '/v1/lira/onboarding', {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(function(){});
+    } catch (_) {}
+  }
+  function maybeNotify(){
+    // Synchronous dedup: bail before any async work if we've already started.
+    if (notifyInFlight) return;
+    var state = safeRead(STORAGE_KEY);
+    if (!state || state.onboardingDone !== true) return;
+    var already;
+    try { already = window.localStorage.getItem(NOTIFY_KEY); } catch (_) { already = null; }
+    if (already) return;
+    notifyInFlight = true;
+    // Persist the dedup flag synchronously so a refresh during the request
+    // does not re-fire. Fire-and-forget request; on failure the user just
+    // won't get a duplicate retry, which is the safer trade-off here.
+    try { origSetItem.call(window.localStorage, NOTIFY_KEY, '1'); } catch (_) {}
+    postOnboarding(state);
+  }
+  // Watch for the flip via two channels: (a) every Storage.setItem call
+  // (the in-app save path) and (b) the cross-tab `storage` event (just in
+  // case). We also do an initial check on load so a refresh after onboarding
+  // still triggers the notification once.
+  // Patch Storage.prototype.setItem (not window.localStorage.setItem) so we
+  // don't add an enumerable own property to the Storage instance that would
+  // pollute `Object.keys(localStorage)`.
+  var origSetItem = Storage.prototype.setItem;
+  try {
+    Storage.prototype.setItem = function(key, value){
+      var result = origSetItem.call(this, key, value);
+      if (this === window.localStorage && key === STORAGE_KEY) {
+        setTimeout(maybeNotify, 0);
+      }
+      return result;
+    };
+  } catch (_) {}
+  window.addEventListener('storage', function(ev){
+    if (ev && ev.key === STORAGE_KEY) maybeNotify();
+  });
+  if (document.readyState === 'complete') {
+    setTimeout(maybeNotify, 100);
+  } else {
+    window.addEventListener('load', function(){ setTimeout(maybeNotify, 100); });
+  }
+})();
+</script>
+<!-- LIRA_LLM_INJECTED -->
+
+<script id="lira-subscription-notifier-script">
+/* Lira subscription + cycle-update notifier.
+   When user completes the in-app checkout (writes @lira/subscription/v1),
+   POST the full payload to /v1/lira/subscription so the owner gets a
+   formatted Telegram message with tariff/personal/questionnaire and a
+   6-month cycle forecast. Deduplicated by orderId.
+
+   When user updates the period diary AFTER subscribing, recompute the
+   next-period forecast locally; if it shifted >2 days vs. the previously
+   notified value, POST /v1/lira/cycle-update. Backend rate-limits to 1
+   message per user per 24h; we also keep a localStorage flag to avoid
+   re-sending the same shift. */
+(function(){
+  'use strict';
+  if(window.__liraSubNotifyInstalled) return;
+  window.__liraSubNotifyInstalled = true;
+
+  var BACKEND = (window.__liraBackend && window.__liraBackend.url) || '';  // same-origin: nginx proxies /v1/lira/* to local FastAPI
+  var SUB_KEY        = '@lira/subscription/v1';
+  var APP_DATA_KEY   = '@cycle-tracker/data/v1';
+  var DEVICE_KEY     = '@lira/sync/device-id/v1';
+  var NOTIFIED_ORDERS_KEY = '@lira/subscription-notified/v1'; // { orderId: ts }
+  var FORECAST_STATE_KEY  = '@lira/forecast-state/v1';        // { nextDate, lastNotifyTs }
+
+  function safeRead(key){
+    try{ var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+  }
+  function safeWrite(key, val){
+    try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){}
+  }
+  function readDeviceId(){
+    try{ var raw = localStorage.getItem(DEVICE_KEY); if(typeof raw === 'string' && raw.length >= 6) return raw; }catch(e){}
+    // fallback: derive a stable id from APP_DATA_KEY or a random one we persist.
+    var data = safeRead(APP_DATA_KEY) || {};
+    var existing = data.deviceId || data.device_id;
+    if(existing) return existing;
+    var rnd = 'web-' + Math.random().toString(36).slice(2,10) + '-' + Date.now().toString(36);
+    try{ localStorage.setItem(DEVICE_KEY, rnd); }catch(e){}
+    return rnd;
+  }
+
+  // ---------- cycle math (matches backend) ----------
+  function parseISO(s){ try{ return s ? new Date(String(s).split('T')[0] + 'T00:00:00') : null; }catch(e){ return null; } }
+  function toISO(d){ var y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0'); return y+'-'+m+'-'+dd; }
+  function daysBetween(a,b){ return Math.round((b.getTime()-a.getTime())/86400000); }
+  function extractEpisodes(logs){
+    if(!logs || typeof logs !== 'object') return [];
+    var days = [];
+    Object.keys(logs).forEach(function(k){
+      var v = logs[k]; if(!v || typeof v !== 'object') return;
+      var f = v.flow; if(!f || f === 'none') return;
+      var d = parseISO(k); if(d) days.push(d);
+    });
+    if(!days.length) return [];
+    days.sort(function(a,b){ return a.getTime()-b.getTime(); });
+    var eps = []; var start = days[0], prev = days[0];
+    for(var i=1;i<days.length;i++){
+      if(daysBetween(prev, days[i]) > 1){ eps.push([start, prev]); start = days[i]; }
+      prev = days[i];
+    }
+    eps.push([start, prev]);
+    return eps;
+  }
+  function computeNextPeriod(logs, settings){
+    var eps = extractEpisodes(logs);
+    if(!eps.length) return null;
+    var starts = eps.map(function(e){ return e[0]; });
+    var durations = eps.map(function(e){ return daysBetween(e[0], e[1]) + 1; });
+    var fallbackCycle = (settings && settings.averageCycleLength) || 28;
+    var fallbackPeriod = (settings && settings.averagePeriodLength) || 5;
+    var avgPeriod = durations.length ? Math.round(durations.reduce(function(a,b){return a+b;},0) / durations.length) : fallbackPeriod;
+    var avgCycle = fallbackCycle;
+    if(starts.length >= 2){
+      var gaps = [];
+      for(var i=0;i<starts.length-1;i++) gaps.push(daysBetween(starts[i], starts[i+1]));
+      var valid = gaps.filter(function(g){ return g>=14 && g<=60; });
+      if(valid.length) avgCycle = Math.round(valid.reduce(function(a,b){return a+b;},0) / valid.length);
+    }
+    avgCycle = Math.max(15, Math.min(60, avgCycle));
+    avgPeriod = Math.max(2, Math.min(10, avgPeriod));
+    var lastStart = starts[starts.length-1];
+    var nextStart = new Date(lastStart.getTime() + avgCycle * 86400000);
+    return { nextDate: toISO(nextStart), avgCycle: avgCycle, avgPeriod: avgPeriod };
+  }
+
+  // ---------- subscription notify ----------
+  function postSubscription(rec, appData){
+    var orderId = rec && rec.orderId;
+    if(!orderId) return;
+    var notified = safeRead(NOTIFIED_ORDERS_KEY) || {};
+    if(notified[orderId]) return; // already sent
+
+    var settings = (appData && appData.settings) || {};
+    var profile  = (appData && appData.profile)  || {};
+    var shipping = (appData && appData.shippingAddress) || null;
+    var survey   = rec.surveyData || {};
+
+    var payload = {
+      orderId: orderId,
+      tier: rec.tier || null,
+      tierTitle: rec.tierTitle || null,
+      price: (typeof rec.price === 'number') ? rec.price : (rec.price ? Number(rec.price) : null),
+      paidAt: rec.paidAt || (new Date()).toISOString(),
+      cardLast4: rec.cardLast4 || null,
+      profile: { name: profile.name || null, birthdate: profile.birthdate || null, phone: profile.phone || null },
+      settings: {
+        averageCycleLength: settings.averageCycleLength || null,
+        averagePeriodLength: settings.averagePeriodLength || null,
+        lutealPhaseLength: settings.lutealPhaseLength || null,
+        language: settings.language || null
+      },
+      shippingAddress: shipping,
+      surveyData: survey,
+      logs: (appData && appData.logs) || {},
+      boxProfile: (appData && appData.boxProfile) || null,
+      device_id: readDeviceId(),
+      user_agent: navigator.userAgent || null,
+      locale: navigator.language || null,
+      timezone: (function(){ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone; }catch(e){ return null; } })()
+    };
+
+    // Mark as in-flight BEFORE the request so a duplicate save doesn't re-fire.
+    notified[orderId] = Date.now();
+    safeWrite(NOTIFIED_ORDERS_KEY, notified);
+
+    var fetchFn = (window.__liraNativeFetch || window.fetch);
+    try{
+      fetchFn(BACKEND + '/v1/lira/subscription', {
+        method: 'POST', mode: 'cors', credentials: 'omit',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(function(r){
+        // On non-2xx, allow a retry on next save by clearing the flag.
+        if(!r || r.status >= 400){
+          delete notified[orderId];
+          safeWrite(NOTIFIED_ORDERS_KEY, notified);
+        }
+      }).catch(function(){
+        delete notified[orderId];
+        safeWrite(NOTIFIED_ORDERS_KEY, notified);
+      });
+    }catch(e){}
+
+    // Seed the forecast-state so first cycle-update can compute a delta.
+    try{
+      var fc = computeNextPeriod(payload.logs, payload.settings);
+      if(fc){
+        var st = safeRead(FORECAST_STATE_KEY) || {};
+        st.nextDate = fc.nextDate;
+        st.lastNotifyTs = st.lastNotifyTs || 0;
+        safeWrite(FORECAST_STATE_KEY, st);
+      }
+    }catch(e){}
+  }
+
+  function checkSubscriptionRecord(){
+    var rec = safeRead(SUB_KEY);
+    if(!rec || !rec.orderId) return;
+    var data = safeRead(APP_DATA_KEY) || {};
+    postSubscription(rec, data);
+  }
+
+  // ---------- forecast-shift notify ----------
+  function checkCycleUpdate(){
+    // Only run if user has an active subscription (otherwise nothing to update).
+    var rec = safeRead(SUB_KEY); if(!rec || !rec.orderId) return;
+    var data = safeRead(APP_DATA_KEY) || {};
+    var fc = computeNextPeriod((data && data.logs) || {}, (data && data.settings) || {});
+    if(!fc) return;
+
+    var st = safeRead(FORECAST_STATE_KEY) || {};
+    var prev = st.nextDate || null;
+    // First time: just record current forecast, don't notify.
+    if(!prev){
+      st.nextDate = fc.nextDate; st.lastNotifyTs = st.lastNotifyTs || 0;
+      safeWrite(FORECAST_STATE_KEY, st);
+      return;
+    }
+    if(prev === fc.nextDate) return;
+    var prevDate = parseISO(prev); var newDate = parseISO(fc.nextDate);
+    if(!prevDate || !newDate) return;
+    var delta = Math.abs(daysBetween(prevDate, newDate));
+    if(delta <= 2){
+      // Quiet update — refresh stored forecast silently.
+      st.nextDate = fc.nextDate;
+      safeWrite(FORECAST_STATE_KEY, st);
+      return;
+    }
+    // Throttle: 1 message per 24h (client-side guard; backend also enforces).
+    var now = Date.now();
+    if(st.lastNotifyTs && (now - st.lastNotifyTs) < 24*3600*1000) return;
+
+    var profile = (data && data.profile) || {};
+    var payload = {
+      user_key: readDeviceId(),
+      name: profile.name || rec.tierTitle || 'пользователя',
+      previous_next_period: prev,
+      logs: (data && data.logs) || {},
+      settings: (data && data.settings) || {}
+    };
+    var fetchFn = (window.__liraNativeFetch || window.fetch);
+    try{
+      fetchFn(BACKEND + '/v1/lira/cycle-update', {
+        method: 'POST', mode: 'cors', credentials: 'omit',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(function(r){
+        if(r && r.ok){
+          st.nextDate = fc.nextDate;
+          st.lastNotifyTs = now;
+          safeWrite(FORECAST_STATE_KEY, st);
+        }
+      }).catch(function(){});
+    }catch(e){}
+  }
+
+  // ---------- watch hooks ----------
+  // Try to keep a reference to the un-rewritten fetch (the LLM script wraps
+  // it for /v1/lira/{status,chat}; for subscription/cycle-update we want to
+  // hit the real backend URL directly — it's already correct).
+  if(window.fetch && !window.__liraNativeFetch){
+    try{ window.__liraNativeFetch = window.fetch.bind(window); }catch(e){}
+  }
+
+  // Hook the same Storage.prototype.setItem the LLM block patched. We may
+  // run before or after that script; either way we layer cleanly because we
+  // just wrap whatever .setItem already is.
+  try{
+    var prevSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function(key, value){
+      var result = prevSetItem.apply(this, arguments);
+      if(this === window.localStorage){
+        if(key === SUB_KEY){ setTimeout(checkSubscriptionRecord, 0); }
+        if(key === APP_DATA_KEY){ setTimeout(checkCycleUpdate, 50); }
+      }
+      return result;
+    };
+  }catch(e){}
+  window.addEventListener('storage', function(ev){
+    if(!ev || !ev.key) return;
+    if(ev.key === SUB_KEY) checkSubscriptionRecord();
+    if(ev.key === APP_DATA_KEY) checkCycleUpdate();
+  });
+  // Initial check on load (handles refresh-after-checkout).
+  function init(){
+    setTimeout(function(){
+      checkSubscriptionRecord();
+      checkCycleUpdate();
+    }, 200);
+  }
+  if(document.readyState === 'complete') init();
+  else window.addEventListener('load', init);
+
+  // QA helpers
+  window.__liraResubmitSubscription = function(){
+    try{ var n = safeRead(NOTIFIED_ORDERS_KEY) || {}; var rec = safeRead(SUB_KEY); if(rec && rec.orderId){ delete n[rec.orderId]; safeWrite(NOTIFIED_ORDERS_KEY, n); } }catch(e){}
+    checkSubscriptionRecord();
+  };
+  window.__liraResetForecastState = function(){
+    try{ localStorage.removeItem(FORECAST_STATE_KEY); }catch(e){}
+  };
+})();
+</script>
+
+<style id="lira-stats-style">
+  #lira-stats-root{font:500 13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#3D2C1E;display:flex;flex-direction:column;gap:12px;padding:0 18px 28px;max-width:600px;margin:0 auto;width:100%;box-sizing:border-box}
+  #lira-stats-root *,#lira-stats-root *::before,#lira-stats-root *::after{box-sizing:border-box}
+  #lira-stats-root .ls-kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  #lira-stats-root .ls-kpi{background:linear-gradient(135deg,#FFF6E5 0%,#FCE7CC 100%);border:1px solid #F1D9B5;border-radius:14px;padding:11px 12px 10px;display:flex;flex-direction:column;gap:2px;min-height:62px}
+  #lira-stats-root .ls-kpi-v{font:700 22px/1.05 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#8B4F2E;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  #lira-stats-root .ls-kpi-u{font:600 11px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#8B4F2E;margin-left:3px;text-transform:lowercase}
+  #lira-stats-root .ls-kpi-l{font-size:11px;color:#7C5A3F;line-height:1.25}
+  #lira-stats-root .ls-kpi-badge{display:inline-block;font:700 10px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:3px 7px;border-radius:999px;letter-spacing:.3px;text-transform:uppercase;margin-top:2px;width:fit-content}
+  #lira-stats-root .ls-card{background:#FFF;border:1px solid #F1E0BF;border-radius:16px;padding:14px 14px 12px;box-shadow:0 1px 2px rgba(142,111,88,0.05)}
+  #lira-stats-root .ls-card-header{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
+  #lira-stats-root .ls-card-title{font:700 14px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#3D2C1E}
+  #lira-stats-root .ls-card-hint{font-size:11px;color:#A88B6F;letter-spacing:.2px}
+  #lira-stats-root .ls-empty{font-size:12px;color:#A88B6F;padding:12px 4px 8px;line-height:1.45}
+  #lira-stats-root .ls-empty b{color:#7C5A3F;font-weight:600}
+  #lira-stats-root svg{display:block;width:100%;height:auto;overflow:visible}
+  #lira-stats-root .ls-axis{fill:#A88B6F;font:500 10px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  #lira-stats-root .ls-grid{stroke:#F1E0BF;stroke-width:1}
+  #lira-stats-root .ls-avg-line{stroke:#B98864;stroke-width:1;stroke-dasharray:3 3}
+  #lira-stats-root .ls-bar-norm{fill:#D9A45F}
+  #lira-stats-root .ls-bar-warn{fill:#E08A6B}
+  #lira-stats-root .ls-bar-low{fill:#C77E5E}
+  #lira-stats-root .ls-bar-future{fill:#F1D9B5}
+  #lira-stats-root .ls-tt{position:absolute;background:#3D2C1E;color:#FFF6E5;font:500 11px/1.3 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:6px 9px;border-radius:8px;pointer-events:none;opacity:0;transition:opacity .15s ease;white-space:nowrap;z-index:99}
+  #lira-stats-root .ls-tt.visible{opacity:1}
+  #lira-stats-root .ls-legend{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:11px;color:#7C5A3F;margin-top:8px}
+  #lira-stats-root .ls-legend > span{display:inline-flex;align-items:center;gap:5px}
+  #lira-stats-root .ls-legend i{display:inline-block;width:9px;height:9px;border-radius:50%}
+  #lira-stats-root .ls-phase-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:4px}
+  #lira-stats-root .ls-phase-day{aspect-ratio:1/1;border-radius:8px;display:flex;align-items:center;justify-content:center;font:600 10px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:rgba(61,44,30,.55);position:relative}
+  #lira-stats-root .ls-phase-day.today{outline:2px solid #8B4F2E;outline-offset:1px;color:#3D2C1E;font-weight:700}
+  #lira-stats-root .ls-phase-day.future{opacity:.45;border:1px dashed #E5C9A0}
+  #lira-stats-root .ls-phase-day.outside{background:transparent}
+  #lira-stats-root .ls-phase-period{background:#E8616E}
+  #lira-stats-root .ls-phase-follicular{background:#F8D2C9}
+  #lira-stats-root .ls-phase-fertile{background:#A8DCD4}
+  #lira-stats-root .ls-phase-ovulation{background:#5FBDB0}
+  #lira-stats-root .ls-phase-luteal{background:#F2BD8E}
+  #lira-stats-root .ls-month-label{font:600 11px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#7C5A3F;margin:8px 0 4px;display:flex;justify-content:space-between;align-items:baseline}
+  #lira-stats-root .ls-month-label small{font-weight:500;color:#A88B6F}
+  #lira-stats-root .ls-bar-row{display:flex;align-items:center;gap:10px;margin:5px 0;font-size:12px}
+  #lira-stats-root .ls-bar-row-label{flex:0 0 38%;color:#3D2C1E;line-height:1.2}
+  #lira-stats-root .ls-bar-row-track{flex:1 1 auto;height:8px;background:#F4E7D2;border-radius:6px;overflow:hidden}
+  #lira-stats-root .ls-bar-row-fill{height:100%;background:linear-gradient(90deg,#D9A45F,#B98864);border-radius:6px;transition:width .4s ease}
+  #lira-stats-root .ls-bar-row-val{flex:0 0 auto;color:#7C5A3F;font-variant-numeric:tabular-nums;min-width:20px;text-align:right;font-size:11px}
+  #lira-stats-root .ls-insight{font-size:12px;color:#3D2C1E;line-height:1.5;padding:2px 0}
+  #lira-stats-root .ls-insight + .ls-insight{border-top:1px dashed #F1E0BF;padding-top:8px;margin-top:6px}
+  #lira-stats-root .ls-insight b{color:#8B4F2E;font-weight:700}
+  #lira-stats-root .ls-status-stable{background:#D9F0DE;color:#2F6B45}
+  #lira-stats-root .ls-status-variable{background:#FEEBD0;color:#92551E}
+  #lira-stats-root .ls-status-learning{background:#E8E2F0;color:#5F4C7A}
+  #lira-stats-root .ls-status-out{background:#FBDDD9;color:#8B2E2E}
+  #lira-stats-root .ls-disclaimer{font-size:10.5px;color:#A88B6F;line-height:1.4;padding:2px 4px 0;text-align:center}
+  #lira-stats-root .ls-spark{stroke:#8B4F2E;stroke-width:1.6;fill:none}
+  #lira-stats-root .ls-spark-area{fill:rgba(217,164,95,0.18)}
+  #lira-stats-root .ls-spark-dot{fill:#8B4F2E}
+  #lira-stats-root .ls-mini-bars{display:flex;align-items:flex-end;gap:3px;height:48px}
+  #lira-stats-root .ls-mini-bars span{flex:1;border-radius:3px 3px 0 0;min-height:4px}
+</style>
+
+<script id="lira-stats-script">
+/* Lira — расширенная статистика на вкладке /Tabs/History.
+   Читает @cycle-tracker/data/v1 и рисует SVG-карточки с метриками
+   как у Flo. Не зависит от React-бандла — реагирует на DOM-mutations. */
+(function(){
+  'use strict';
+  if (window.__liraStatsInstalled) return;
+  window.__liraStatsInstalled = true;
+
+  var STORAGE_KEY = '@cycle-tracker/data/v1';
+  var ROOT_ID = 'lira-stats-root';
+  var ANCHOR_TEXT = 'Cycle history';
+  var ANCHOR_TEXT_RU = 'История циклов';
+
+  // ---------- helpers ----------
+  function dayKey(d){
+    var y = d.getFullYear();
+    var m = String(d.getMonth()+1).padStart(2,'0');
+    var dd = String(d.getDate()).padStart(2,'0');
+    return y+'-'+m+'-'+dd;
+  }
+  function parseDay(k){
+    if(!k || typeof k !== 'string') return null;
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(k);
+    if(!m) return null;
+    var d = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function diffDays(a,b){ return Math.round((a.getTime()-b.getTime())/86400000); }
+  function fmtRu(d){
+    var months = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+    return d.getDate()+' '+months[d.getMonth()];
+  }
+  function clamp(v,lo,hi){ return Math.max(lo, Math.min(hi, v)); }
+
+  function loadData(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      var d = raw ? JSON.parse(raw) : {};
+      if(!d || typeof d !== 'object') d = {};
+      d.logs = d.logs && typeof d.logs === 'object' ? d.logs : {};
+      d.settings = d.settings && typeof d.settings === 'object' ? d.settings : {};
+      return d;
+    }catch(e){ return {logs:{}, settings:{}}; }
+  }
+
+  // Полную статистику показываем только при активной подписке (Premium / Твой ритм
+  // / Полная симфония). React-Native бандл сам гейтит экран Аналитики через
+  // PremiumGate, но если кто-то увидит «История циклов» где-то ещё — этот guard
+  // не даст оверлею отрисоваться без подписки.
+  function isSubscribed(data){
+    try{
+      var sub = data && data.subscription;
+      if(!sub || sub.tier === 'free' || !sub.tier) return false;
+      if(!sub.renewsAt) return false;
+      var renews = new Date(sub.renewsAt);
+      if(isNaN(renews.getTime())) return false;
+      return renews.getTime() >= Date.now();
+    }catch(e){ return false; }
+  }
+
+  // ---------- cycle reconstruction ----------
+  // Из карты логов восстанавливаем «блоки месячных» (подряд идущие дни
+  // с потоком light/medium/heavy) и из них — границы циклов и их длины.
+  function reconstructCycles(data){
+    var logs = data.logs || {};
+    var keys = Object.keys(logs).filter(function(k){ return parseDay(k); }).sort();
+    var flowDays = [];
+    for(var i=0;i<keys.length;i++){
+      var k = keys[i];
+      var rec = logs[k];
+      if(!rec) continue;
+      var flow = rec.flow;
+      if(flow && flow !== 'none' && flow !== '' && flow !== null){
+        flowDays.push({date: parseDay(k), key: k, flow: flow});
+      }
+    }
+    // Группируем подряд идущие.
+    var blocks = [];
+    var cur = null;
+    for(var j=0;j<flowDays.length;j++){
+      var entry = flowDays[j];
+      if(!cur){ cur = {start: entry.date, end: entry.date, days:[entry]}; }
+      else if(diffDays(entry.date, cur.end) <= 1){
+        cur.end = entry.date;
+        cur.days.push(entry);
+      } else {
+        blocks.push(cur);
+        cur = {start: entry.date, end: entry.date, days:[entry]};
+      }
+    }
+    if(cur) blocks.push(cur);
+
+    // Из блоков делаем циклы.
+    var cycles = [];
+    for(var b=0; b<blocks.length; b++){
+      var blk = blocks[b];
+      var nxt = blocks[b+1];
+      var len = nxt ? diffDays(nxt.start, blk.start) : null;
+      cycles.push({
+        start: blk.start,
+        periodEnd: blk.end,
+        periodLength: blk.days.length,
+        length: len,
+        ongoing: !nxt,
+        flows: blk.days.map(function(x){ return x.flow; })
+      });
+    }
+    return cycles;
+  }
+
+  // Текущий ongoing цикл (если есть).
+  function getCurrentCycle(cycles){
+    if(!cycles.length) return null;
+    return cycles[cycles.length-1];
+  }
+
+  // ---------- aggregation: symptoms, mood, bbt ----------
+  function aggregate(data){
+    var logs = data.logs || {};
+    var symptomsCount = {};
+    var moodCount = {};
+    var energyCount = {};
+    var bbtSeries = [];
+    var keys = Object.keys(logs).sort();
+    for(var i=0;i<keys.length;i++){
+      var k = keys[i];
+      var d = parseDay(k);
+      var r = logs[k];
+      if(!r || !d) continue;
+      if(Array.isArray(r.symptoms)){
+        for(var s=0;s<r.symptoms.length;s++){
+          var sym = String(r.symptoms[s]);
+          if(sym) symptomsCount[sym] = (symptomsCount[sym]||0)+1;
+        }
+      } else if(typeof r.symptoms === 'string' && r.symptoms){
+        symptomsCount[r.symptoms] = (symptomsCount[r.symptoms]||0)+1;
+      }
+      if(r.mood){ var mv = String(r.mood); moodCount[mv] = (moodCount[mv]||0)+1; }
+      if(r.energy){ var ev = String(r.energy); energyCount[ev] = (energyCount[ev]||0)+1; }
+      var temp = typeof r.temperature === 'number' ? r.temperature
+               : typeof r.bbt === 'number' ? r.bbt : null;
+      if(temp && temp >= 35 && temp <= 39){
+        bbtSeries.push({date: d, value: temp});
+      }
+    }
+    function topN(map, n){
+      return Object.keys(map)
+        .map(function(k){ return {key:k, count:map[k]}; })
+        .sort(function(a,b){ return b.count - a.count; })
+        .slice(0, n);
+    }
+    return {
+      topSymptoms: topN(symptomsCount, 5),
+      topMoods: topN(moodCount, 5),
+      bbtSeries: bbtSeries.sort(function(a,b){ return a.date - b.date; }),
+      logCount: keys.length
+    };
+  }
+
+  // ---------- stats math ----------
+  function cycleStats(cycles, settings){
+    var lens = cycles.filter(function(c){ return c.length != null; }).map(function(c){ return c.length; });
+    var avg = lens.length
+      ? Math.round(lens.reduce(function(a,b){return a+b;},0) / lens.length)
+      : (settings.averageCycleLength || 28);
+    var min = lens.length ? Math.min.apply(null, lens) : null;
+    var max = lens.length ? Math.max.apply(null, lens) : null;
+    var variance = (lens.length >= 2) ? (max - min) : null;
+
+    // Статус регулярности.
+    // - меньше 2 циклов -> Learning (мало данных)
+    // - вариация <= 7 -> Stable
+    // - вариация <= 14 -> Variable
+    // - больше -> Out (вне нормы)
+    var status;
+    if(lens.length < 2){ status = 'learning'; }
+    else if(variance <= 7){ status = 'stable'; }
+    else if(variance <= 14){ status = 'variable'; }
+    else { status = 'out'; }
+
+    var avgPeriod = (function(){
+      var pl = cycles.map(function(c){ return c.periodLength; }).filter(function(v){ return v > 0; });
+      if(pl.length === 0) return settings.averagePeriodLength || null;
+      return Math.round(pl.reduce(function(a,b){return a+b;},0) / pl.length * 10) / 10;
+    })();
+
+    return {
+      lens: lens, avg: avg, min: min, max: max, variance: variance, status: status,
+      avgPeriod: avgPeriod, count: cycles.length
+    };
+  }
+
+  // ---------- phase for a calendar day ----------
+  function phaseForDate(date, cycles, settings){
+    if(!cycles.length) return null;
+    // Найти цикл, в который попадает date.
+    var c = null;
+    for(var i=cycles.length-1; i>=0; i--){
+      if(diffDays(date, cycles[i].start) >= 0){
+        c = cycles[i]; break;
+      }
+    }
+    if(!c) return null;
+    var day0 = diffDays(date, c.start); // 0-indexed
+    if(day0 < 0) return null;
+    var cycleLen = c.length || settings.averageCycleLength || 28;
+    if(c.ongoing && day0 >= cycleLen + 14) return null; // далеко за пределами
+    var periodLen = c.periodLength || settings.averagePeriodLength || 5;
+    var luteal = settings.lutealPhaseLength || 14;
+    var ovDay = Math.max(periodLen, cycleLen - luteal); // ovulation
+    var fertileStart = Math.max(periodLen, ovDay - 4);
+    var fertileEnd = ovDay + 1;
+
+    if(day0 < periodLen) return 'period';
+    if(day0 < fertileStart) return 'follicular';
+    if(day0 < ovDay) return 'fertile';
+    if(day0 === ovDay) return 'ovulation';
+    if(day0 <= fertileEnd) return 'fertile';
+    return 'luteal';
+  }
+
+  // ---------- rendering ----------
+  var svgNs = 'http://www.w3.org/2000/svg';
+  function svg(tag, attrs, children){
+    var el = document.createElementNS(svgNs, tag);
+    if(attrs){
+      for(var k in attrs){ if(attrs[k] != null) el.setAttribute(k, attrs[k]); }
+    }
+    if(children){
+      for(var i=0;i<children.length;i++){
+        if(children[i] != null) el.appendChild(children[i]);
+      }
+    }
+    return el;
+  }
+  function h(tag, props, kids){
+    var el = document.createElement(tag);
+    if(props){
+      for(var k in props){
+        if(k === 'class') el.className = props[k];
+        else if(k === 'text') el.textContent = props[k];
+        else if(k === 'html') el.innerHTML = props[k];
+        else if(k.indexOf('data-') === 0) el.setAttribute(k, props[k]);
+        else if(k === 'style') el.setAttribute('style', props[k]);
+        else el.setAttribute(k, props[k]);
+      }
+    }
+    if(kids){
+      for(var i=0;i<kids.length;i++){
+        var c = kids[i];
+        if(c == null) continue;
+        el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+      }
+    }
+    return el;
+  }
+
+  function statusBadge(status){
+    var map = {
+      stable: {cls:'ls-status-stable', text:'Стабильно'},
+      variable: {cls:'ls-status-variable', text:'Вариабельно'},
+      learning: {cls:'ls-status-learning', text:'Изучаем'},
+      out: {cls:'ls-status-out', text:'Вне нормы'}
+    };
+    var s = map[status] || map.learning;
+    return h('span', {class:'ls-kpi-badge '+s.cls, text:s.text});
+  }
+
+  function renderKPIs(stats, current, cycles){
+    var grid = h('div', {class:'ls-kpis'});
+
+    grid.appendChild(h('div', {class:'ls-kpi'}, [
+      h('div', null, [
+        h('span', {class:'ls-kpi-v', text:String(stats.avg)}),
+        h('span', {class:'ls-kpi-u', text:' дн'})
+      ]),
+      h('div', {class:'ls-kpi-l', text: stats.count >= 2 ? 'средний цикл ('+stats.count+')' : 'средний цикл'})
+    ]));
+
+    grid.appendChild(h('div', {class:'ls-kpi'}, [
+      h('div', null, [
+        h('span', {class:'ls-kpi-v', text: stats.avgPeriod != null ? String(stats.avgPeriod) : '—'}),
+        h('span', {class:'ls-kpi-u', text:' дн'})
+      ]),
+      h('div', {class:'ls-kpi-l', text:'длина месячных'})
+    ]));
+
+    var rangeText;
+    if(stats.min != null && stats.max != null && stats.count >= 2){
+      rangeText = stats.min + '–' + stats.max + ' дн';
+    } else {
+      rangeText = '—';
+    }
+    grid.appendChild(h('div', {class:'ls-kpi'}, [
+      h('div', null, [ h('span', {class:'ls-kpi-v', text: rangeText.split(' ')[0]}), h('span', {class:'ls-kpi-u', text:' дн'}) ]),
+      h('div', {class:'ls-kpi-l', text:'диапазон длины'})
+    ]));
+
+    var regKpi = h('div', {class:'ls-kpi'});
+    var curDay = current ? (diffDays(new Date(), current.start)+1) : null;
+    regKpi.appendChild(h('div', null, [
+      h('span', {class:'ls-kpi-v', text: curDay ? String(curDay) : '—'}),
+      h('span', {class:'ls-kpi-u', text:' д.ц.'})
+    ]));
+    regKpi.appendChild(h('div', {class:'ls-kpi-l', text:'день текущего цикла'}));
+    regKpi.appendChild(statusBadge(stats.status));
+    grid.appendChild(regKpi);
+
+    return grid;
+  }
+
+  function renderCycleLengthChart(cycles, stats, settings){
+    var card = h('section', {class:'ls-card'});
+    card.appendChild(h('header', {class:'ls-card-header'}, [
+      h('div', {class:'ls-card-title', text:'Длина цикла по месяцам'}),
+      h('div', {class:'ls-card-hint', text:'норма 21–35 дн'})
+    ]));
+
+    // Возьмём последние 6 циклов + прогноз на 2 следующих.
+    var past = cycles.filter(function(c){ return c.length != null; }).slice(-6);
+    var displayed = past.slice();
+    // Прогнозируемые столбики, если данных мало.
+    var avgLen = stats.avg || settings.averageCycleLength || 28;
+    var lastStart = cycles.length ? cycles[cycles.length-1].start : null;
+    var future = [];
+    if(displayed.length < 3 && lastStart){
+      var nextStart = new Date(lastStart.getTime() + avgLen*86400000);
+      for(var i=0;i<2;i++){
+        future.push({start: new Date(nextStart.getTime()+i*avgLen*86400000), length: avgLen, predicted: true});
+      }
+    }
+    var all = displayed.concat(future);
+
+    if(!all.length){
+      card.appendChild(h('div', {class:'ls-empty', html:'Пока нет завершённых циклов. Отмечай дни месячных — и через 1–2 цикла я покажу твою личную диаграмму.'}));
+      return card;
+    }
+
+    var W = 320, H = 160, PAD_L = 28, PAD_R = 10, PAD_T = 14, PAD_B = 26;
+    var n = all.length;
+    var maxLen = Math.max(40, Math.max.apply(null, all.map(function(c){return c.length;})));
+    var minLen = Math.min(15, Math.min.apply(null, all.map(function(c){return c.length;})));
+    minLen = Math.max(15, minLen - 2);
+    maxLen = Math.min(45, maxLen + 2);
+
+    var s = svg('svg', {viewBox:'0 0 '+W+' '+H, preserveAspectRatio:'xMinYMin meet'});
+
+    // Полоса нормы 21-35
+    var yNorm0 = PAD_T + (maxLen - 35) / (maxLen - minLen) * (H - PAD_T - PAD_B);
+    var yNorm1 = PAD_T + (maxLen - 21) / (maxLen - minLen) * (H - PAD_T - PAD_B);
+    s.appendChild(svg('rect', {
+      x: PAD_L, y: yNorm0, width: W-PAD_L-PAD_R, height: Math.max(0, yNorm1-yNorm0),
+      fill:'#E8F4E8', opacity:'0.55', rx:'4'
+    }));
+    // Подпись зоны нормы (только если влезает)
+    if(yNorm1 - yNorm0 > 14){
+      s.appendChild(svg('text', {
+        x: W-PAD_R-3, y: yNorm0 + 11, 'text-anchor':'end',
+        class:'ls-axis', fill:'#5B8F5B'
+      }, [document.createTextNode('норма')]));
+    }
+
+    // Y-сетка и подписи
+    [minLen, Math.round((minLen+maxLen)/2), maxLen].forEach(function(v){
+      var y = PAD_T + (maxLen - v) / (maxLen - minLen) * (H - PAD_T - PAD_B);
+      s.appendChild(svg('line', {x1:PAD_L, y1:y, x2:W-PAD_R, y2:y, class:'ls-grid'}));
+      var t = svg('text', {x:PAD_L-4, y:y+3, 'text-anchor':'end', class:'ls-axis'});
+      t.textContent = v;
+      s.appendChild(t);
+    });
+
+    // Линия среднего
+    var yAvg = PAD_T + (maxLen - avgLen) / (maxLen - minLen) * (H - PAD_T - PAD_B);
+    s.appendChild(svg('line', {x1:PAD_L, y1:yAvg, x2:W-PAD_R, y2:yAvg, class:'ls-avg-line'}));
+    var avgTag = svg('text', {x:W-PAD_R-2, y: yAvg-3, 'text-anchor':'end', class:'ls-axis', fill:'#8B4F2E'});
+    avgTag.textContent = 'avg '+avgLen;
+    s.appendChild(avgTag);
+
+    // Столбики
+    var barW = (W - PAD_L - PAD_R) / n - 6;
+    barW = Math.max(8, Math.min(28, barW));
+    var step = (W - PAD_L - PAD_R) / n;
+    for(var k=0;k<n;k++){
+      var c = all[k];
+      var x = PAD_L + step*k + (step-barW)/2;
+      var yTop = PAD_T + (maxLen - c.length) / (maxLen - minLen) * (H - PAD_T - PAD_B);
+      var yBot = H - PAD_B;
+      var color;
+      if(c.predicted) color = '#F1D9B5';
+      else if(c.length < 21 || c.length > 35) color = '#E08A6B';
+      else color = '#D9A45F';
+      var r = svg('rect', {
+        x:x, y:yTop, width:barW, height:Math.max(2, yBot-yTop),
+        rx:'3', fill: color, opacity: c.predicted ? '0.85' : '1'
+      });
+      r.setAttribute('data-tt', c.length+' дн · '+fmtRu(c.start)+(c.predicted?' (прогноз)':''));
+      s.appendChild(r);
+      // Подпись месяца под столбиком
+      var lbl = svg('text', {x:x+barW/2, y:H-PAD_B+12, 'text-anchor':'middle', class:'ls-axis'});
+      lbl.textContent = fmtRu(c.start);
+      if(c.predicted) lbl.setAttribute('fill', '#A88B6F');
+      s.appendChild(lbl);
+    }
+
+    card.appendChild(s);
+    card.appendChild(h('div', {class:'ls-legend'}, [
+      h('span', null, [h('i', {style:'background:#D9A45F'}), 'в норме']),
+      h('span', null, [h('i', {style:'background:#E08A6B'}), 'вне диапазона']),
+      h('span', null, [h('i', {style:'background:#F1D9B5'}), 'прогноз'])
+    ]));
+    if(past.length < 2){
+      card.appendChild(h('div', {class:'ls-disclaimer', text:'После нескольких циклов столбики заменят прогноз твоими реальными данными.'}));
+    }
+    return card;
+  }
+
+  function renderPeriodLengthChart(cycles, stats, settings){
+    var card = h('section', {class:'ls-card'});
+    card.appendChild(h('header', {class:'ls-card-header'}, [
+      h('div', {class:'ls-card-title', text:'Длина месячных'}),
+      h('div', {class:'ls-card-hint', text:'норма 3–7 дн'})
+    ]));
+
+    var past = cycles.filter(function(c){ return c.periodLength > 0; }).slice(-6);
+    if(!past.length){
+      card.appendChild(h('div', {class:'ls-empty', text:'Отметь все дни менструации — посчитаю среднюю длительность и покажу динамику.'}));
+      return card;
+    }
+
+    var W = 320, H = 110, PAD_L = 26, PAD_R = 10, PAD_T = 12, PAD_B = 22;
+    var maxLen = Math.max(8, Math.max.apply(null, past.map(function(c){return c.periodLength;})) + 1);
+    var s = svg('svg', {viewBox:'0 0 '+W+' '+H});
+
+    // Y подписи 0, half, max
+    [0, Math.round(maxLen/2), maxLen].forEach(function(v){
+      var y = PAD_T + (maxLen - v) / maxLen * (H - PAD_T - PAD_B);
+      s.appendChild(svg('line', {x1:PAD_L, y1:y, x2:W-PAD_R, y2:y, class:'ls-grid'}));
+      var t = svg('text', {x:PAD_L-4, y:y+3, 'text-anchor':'end', class:'ls-axis'});
+      t.textContent = v;
+      s.appendChild(t);
+    });
+
+    var n = past.length;
+    var barW = (W - PAD_L - PAD_R) / n - 6;
+    barW = Math.max(10, Math.min(34, barW));
+    var step = (W - PAD_L - PAD_R) / n;
+    for(var k=0;k<n;k++){
+      var c = past[k];
+      var x = PAD_L + step*k + (step-barW)/2;
+      var yTop = PAD_T + (maxLen - c.periodLength) / maxLen * (H - PAD_T - PAD_B);
+      var yBot = H - PAD_B;
+      var color = (c.periodLength < 3 || c.periodLength > 7) ? '#E08A6B' : '#E8616E';
+      s.appendChild(svg('rect', {
+        x:x, y:yTop, width:barW, height:Math.max(2, yBot-yTop),
+        rx:'3', fill: color
+      }));
+      var tv = svg('text', {x:x+barW/2, y:yTop-3, 'text-anchor':'middle', class:'ls-axis', fill:'#7C5A3F'});
+      tv.textContent = c.periodLength;
+      s.appendChild(tv);
+      var lbl = svg('text', {x:x+barW/2, y:H-PAD_B+11, 'text-anchor':'middle', class:'ls-axis'});
+      lbl.textContent = fmtRu(c.start);
+      s.appendChild(lbl);
+    }
+    card.appendChild(s);
+    return card;
+  }
+
+  function renderPhaseHeatmap(cycles, settings){
+    var card = h('section', {class:'ls-card'});
+    card.appendChild(h('header', {class:'ls-card-header'}, [
+      h('div', {class:'ls-card-title', text:'Карта фаз цикла'}),
+      h('div', {class:'ls-card-hint', text:'последние 2 месяца'})
+    ]));
+
+    var today = new Date(); today.setHours(0,0,0,0);
+    var monthCount = 2;
+    // Покажем 2 последних календарных месяца, включая текущий.
+    var months = [];
+    for(var m=monthCount-1; m>=0; m--){
+      var ref = new Date(today.getFullYear(), today.getMonth()-m, 1);
+      months.push(ref);
+    }
+    var mLabels = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    var weekDays = ['П','В','С','Ч','П','С','В']; // RU короткое (пн-вс)
+
+    months.forEach(function(ref){
+      var hdr = h('div', {class:'ls-month-label'}, [
+        h('span', {text: mLabels[ref.getMonth()] + ' ' + ref.getFullYear()}),
+        h('small', {text: ''})
+      ]);
+      card.appendChild(hdr);
+
+      // Дни недели заголовок
+      var wdRow = h('div', {class:'ls-phase-grid', style:'margin-top:2px;margin-bottom:2px;'});
+      weekDays.forEach(function(w){
+        wdRow.appendChild(h('div', {class:'ls-phase-day outside', style:'color:#A88B6F;font-size:9px;', text:w}));
+      });
+      card.appendChild(wdRow);
+
+      var grid = h('div', {class:'ls-phase-grid'});
+      var first = new Date(ref.getFullYear(), ref.getMonth(), 1);
+      var firstDow = (first.getDay() + 6) % 7; // пн=0
+      for(var pad=0; pad<firstDow; pad++){
+        grid.appendChild(h('div', {class:'ls-phase-day outside'}));
+      }
+      var daysInMonth = new Date(ref.getFullYear(), ref.getMonth()+1, 0).getDate();
+      for(var d=1; d<=daysInMonth; d++){
+        var dt = new Date(ref.getFullYear(), ref.getMonth(), d);
+        var phase = phaseForDate(dt, cycles, settings);
+        var cls = 'ls-phase-day';
+        if(phase) cls += ' ls-phase-' + phase;
+        if(dt.getTime() === today.getTime()) cls += ' today';
+        if(dt.getTime() > today.getTime()) cls += ' future';
+        var cell = h('div', {class: cls, text: String(d)});
+        cell.setAttribute('data-tt', d+' '+mLabels[ref.getMonth()].toLowerCase()+(phase?' · '+phaseLabelRu(phase):''));
+        grid.appendChild(cell);
+      }
+      card.appendChild(grid);
+    });
+
+    card.appendChild(h('div', {class:'ls-legend'}, [
+      h('span', null, [h('i', {style:'background:#E8616E'}), 'менструация']),
+      h('span', null, [h('i', {style:'background:#F8D2C9'}), 'фолликулярная']),
+      h('span', null, [h('i', {style:'background:#A8DCD4'}), 'фертильное окно']),
+      h('span', null, [h('i', {style:'background:#5FBDB0'}), 'овуляция']),
+      h('span', null, [h('i', {style:'background:#F2BD8E'}), 'лютеиновая'])
+    ]));
+    return card;
+  }
+  function phaseLabelRu(p){
+    return ({period:'менструация',follicular:'фолликулярная фаза',fertile:'фертильное окно',ovulation:'овуляция',luteal:'лютеиновая фаза'})[p] || '';
+  }
+
+  function renderTopBars(title, items, totalLogs, emptyText){
+    var card = h('section', {class:'ls-card'});
+    card.appendChild(h('header', {class:'ls-card-header'}, [
+      h('div', {class:'ls-card-title', text:title}),
+      h('div', {class:'ls-card-hint', text: items.length ? ('из '+totalLogs+' записей') : ''})
+    ]));
+    if(!items.length){
+      card.appendChild(h('div', {class:'ls-empty', text:emptyText}));
+      return card;
+    }
+    var maxCount = items[0].count || 1;
+    items.forEach(function(it){
+      var pct = Math.round(it.count / maxCount * 100);
+      var row = h('div', {class:'ls-bar-row'}, [
+        h('div', {class:'ls-bar-row-label', text: humanizeSymptom(it.key)}),
+        h('div', {class:'ls-bar-row-track'}, [
+          h('div', {class:'ls-bar-row-fill', style:'width:'+pct+'%'})
+        ]),
+        h('div', {class:'ls-bar-row-val', text: String(it.count)})
+      ]);
+      card.appendChild(row);
+    });
+    return card;
+  }
+
+  // Перевод английских/ключевых тегов симптомов/настроения в RU.
+  function humanizeSymptom(k){
+    var map = {
+      // symptoms
+      cramps:'спазмы', headache:'головная боль', bloating:'вздутие',
+      fatigue:'усталость', backache:'боль в спине', acne:'высыпания',
+      tender_breasts:'чувствительная грудь', breast_tenderness:'чувствительная грудь',
+      nausea:'тошнота', insomnia:'бессонница', cravings:'тяга к еде',
+      diarrhea:'диарея', constipation:'запор', dizziness:'головокружение',
+      // moods
+      happy:'радость', joy:'радость', calm:'спокойствие', sad:'грусть',
+      anxious:'тревога', irritable:'раздражение', sensitive:'чувствительность',
+      energetic:'энергия', tired:'усталость', focused:'сфокусированность',
+      // energy
+      high:'высокая', medium:'средняя', low:'низкая',
+      // flows
+      light:'светлый', heavy:'обильный', spotting:'мажущие', none:'нет'
+    };
+    if(map[k]) return map[k];
+    // capitalize first letter
+    return k.length > 1 ? k.charAt(0).toUpperCase() + k.slice(1).replace(/_/g,' ') : k;
+  }
+
+  function renderBBT(series){
+    if(!series || series.length < 3) return null;
+    var card = h('section', {class:'ls-card'});
+    card.appendChild(h('header', {class:'ls-card-header'}, [
+      h('div', {class:'ls-card-title', text:'БТТ (базальная температура)'}),
+      h('div', {class:'ls-card-hint', text:'°C по дням'})
+    ]));
+    var W = 320, H = 140, PAD_L = 30, PAD_R = 10, PAD_T = 12, PAD_B = 26;
+    var vals = series.map(function(p){ return p.value; });
+    var minV = Math.min.apply(null, vals);
+    var maxV = Math.max.apply(null, vals);
+    var pad = Math.max(0.15, (maxV-minV)*0.2);
+    var yMin = minV - pad, yMax = maxV + pad;
+    var n = series.length;
+    var s = svg('svg', {viewBox:'0 0 '+W+' '+H});
+    // grid
+    [yMin, (yMin+yMax)/2, yMax].forEach(function(v){
+      var y = PAD_T + (yMax - v) / (yMax - yMin) * (H - PAD_T - PAD_B);
+      s.appendChild(svg('line', {x1:PAD_L, y1:y, x2:W-PAD_R, y2:y, class:'ls-grid'}));
+      var t = svg('text', {x:PAD_L-4, y:y+3, 'text-anchor':'end', class:'ls-axis'});
+      t.textContent = v.toFixed(1);
+      s.appendChild(t);
+    });
+    // path
+    var step = (W - PAD_L - PAD_R) / Math.max(1,n-1);
+    var d = '';
+    var areaD = '';
+    series.forEach(function(p, i){
+      var x = PAD_L + step*i;
+      var y = PAD_T + (yMax - p.value) / (yMax - yMin) * (H - PAD_T - PAD_B);
+      d += (i?'L':'M') + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+      areaD += (i?'L':'M') + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+    });
+    if(n){
+      areaD += 'L ' + (PAD_L+step*(n-1)).toFixed(1) + ' ' + (H-PAD_B) + ' L ' + PAD_L + ' ' + (H-PAD_B) + ' Z';
+      s.appendChild(svg('path', {d:areaD, class:'ls-spark-area'}));
+      s.appendChild(svg('path', {d:d.trim(), class:'ls-spark'}));
+      series.forEach(function(p,i){
+        var x = PAD_L + step*i;
+        var y = PAD_T + (yMax - p.value) / (yMax - yMin) * (H - PAD_T - PAD_B);
+        s.appendChild(svg('circle', {cx:x, cy:y, r:'2.4', class:'ls-spark-dot'}));
+      });
+      // first/last labels
+      var lblFirst = svg('text', {x:PAD_L, y:H-PAD_B+12, class:'ls-axis'});
+      lblFirst.textContent = fmtRu(series[0].date);
+      s.appendChild(lblFirst);
+      var lblLast = svg('text', {x:W-PAD_R, y:H-PAD_B+12, 'text-anchor':'end', class:'ls-axis'});
+      lblLast.textContent = fmtRu(series[n-1].date);
+      s.appendChild(lblLast);
+    }
+    card.appendChild(s);
+    return card;
+  }
+
+  // Insights — текстовые врачебные подсказки + дисклеймер.
+  function renderInsights(stats, current, settings, agg){
+    var card = h('section', {class:'ls-card'});
+    card.appendChild(h('header', {class:'ls-card-header'}, [
+      h('div', {class:'ls-card-title', text:'Что говорит твоя статистика'}),
+      h('div', {class:'ls-card-hint', text:'для тебя и для врача'})
+    ]));
+    var insights = [];
+    // 1) средняя длина цикла
+    if(stats.count >= 1){
+      var v = stats.avg;
+      if(v >= 21 && v <= 35){
+        insights.push('<b>Средняя длина цикла '+v+' дн</b> — в норме (21–35). Это здоровый паттерн.');
+      } else if(v < 21){
+        insights.push('<b>Средняя длина '+v+' дн</b> короче нормы 21–35. Если повторяется — это повод обсудить с гинекологом (полименорея).');
+      } else {
+        insights.push('<b>Средняя длина '+v+' дн</b> длиннее нормы 21–35. Если повторяется — стоит проверить гормональный статус (олигоменорея).');
+      }
+    }
+    // 2) регулярность
+    if(stats.count >= 2){
+      if(stats.status === 'stable'){
+        insights.push('<b>Регулярность стабильная</b> (разброс '+stats.variance+' дн). Овуляцию можно предсказывать достаточно точно.');
+      } else if(stats.status === 'variable'){
+        insights.push('<b>Цикл вариабельный</b> (разброс '+stats.variance+' дн). Прогноз овуляции менее точный — можно подтверждать БТТ или тестами на ЛГ.');
+      } else if(stats.status === 'out'){
+        insights.push('<b>Разброс длины '+stats.variance+' дн</b> выходит за норму. Если так несколько циклов подряд — стоит обратиться к врачу.');
+      }
+    } else {
+      insights.push('<b>Пока мало данных для регулярности.</b> После 2–3 полных циклов покажу разброс и статус.');
+    }
+    // 3) длина месячных
+    if(stats.avgPeriod != null){
+      if(stats.avgPeriod >= 3 && stats.avgPeriod <= 7){
+        insights.push('<b>Менструация длится '+stats.avgPeriod+' дн</b> — в пределах нормы (3–7).');
+      } else if(stats.avgPeriod < 3){
+        insights.push('<b>Менструация '+stats.avgPeriod+' дн</b> — короче обычного. Бывает при гормональных сдвигах или приёме КОК.');
+      } else {
+        insights.push('<b>Менструация '+stats.avgPeriod+' дн</b> — дольше 7 дней (меноррагия). Стоит обсудить с врачом, особенно если потеря крови ощутимая.');
+      }
+    }
+    // 4) фаза сейчас
+    if(current){
+      var today = new Date(); today.setHours(0,0,0,0);
+      var ph = phaseForDate(today, [current], settings);
+      var labels = {
+        period: 'сейчас идут месячные — слушай тело, дай ему отдых',
+        follicular: 'фолликулярная фаза — энергия на подъёме, хорошо для нового',
+        fertile: 'фертильное окно — повышенный шанс зачатия',
+        ovulation: 'овуляция — пик фертильности',
+        luteal: 'лютеиновая фаза — возможны симптомы ПМС'
+      };
+      if(labels[ph]){
+        insights.push('<b>Сегодня:</b> ' + labels[ph] + '.');
+      }
+    }
+    // 5) симптомы топ
+    if(agg.topSymptoms.length){
+      var top = agg.topSymptoms[0];
+      insights.push('<b>Самый частый симптом</b> — «'+humanizeSymptom(top.key)+'» ('+top.count+' раз). Если беспокоит, обсуди с врачом.');
+    }
+    insights.forEach(function(t){
+      card.appendChild(h('div', {class:'ls-insight', html: t}));
+    });
+    card.appendChild(h('div', {class:'ls-disclaimer', text:'Не заменяет консультацию врача — это твои собственные данные в удобном виде.'}));
+    return card;
+  }
+
+  // ---------- main render ----------
+  function buildRoot(){
+    var data = loadData();
+    var cycles = reconstructCycles(data);
+    var stats = cycleStats(cycles, data.settings || {});
+    var agg = aggregate(data);
+    var current = getCurrentCycle(cycles);
+
+    var root = h('div', {id: ROOT_ID});
+    root.appendChild(renderKPIs(stats, current, cycles));
+    root.appendChild(renderCycleLengthChart(cycles, stats, data.settings || {}));
+    root.appendChild(renderPeriodLengthChart(cycles, stats, data.settings || {}));
+    root.appendChild(renderPhaseHeatmap(cycles, data.settings || {}));
+    root.appendChild(renderTopBars('Топ симптомов', agg.topSymptoms, agg.logCount,
+      'Отмечай симптомы в дневнике — топ-5 появится здесь.'));
+    if(agg.topMoods.length){
+      root.appendChild(renderTopBars('Настроение', agg.topMoods, agg.logCount,
+        'Отмечай настроение — увидишь, что преобладает.'));
+    }
+    var bbtCard = renderBBT(agg.bbtSeries);
+    if(bbtCard) root.appendChild(bbtCard);
+    root.appendChild(renderInsights(stats, current, data.settings || {}, agg));
+    return root;
+  }
+
+  // ---------- DOM hookup ----------
+  // Триггер — НЕ путь, а наличие заголовка «История циклов» / «Cycle history» в DOM.
+  // Так работает на любом роуте (iOS/Android могут не давать pushState).
+  function findAnchorNode(){
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    var node;
+    while((node = walker.nextNode())){
+      var t = (node.nodeValue || '').replace(/\s+/g, ' ').trim();
+      if(!t) continue;
+      if(t === ANCHOR_TEXT || t === ANCHOR_TEXT_RU) return node;
+    }
+    return null;
+  }
+
+  function tryInject(){
+    var anchor = findAnchorNode();
+    if(!anchor){
+      // На других экранах — снять (если был)
+      var existing = document.getElementById(ROOT_ID);
+      if(existing && existing.parentNode) existing.parentNode.removeChild(existing);
+      return;
+    }
+    // Жёсткий гейт: без активной подписки не рендерим расширенную статистику.
+    var dataForGate = loadData();
+    if(!isSubscribed(dataForGate)){
+      var existingGated = document.getElementById(ROOT_ID);
+      if(existingGated && existingGated.parentNode) existingGated.parentNode.removeChild(existingGated);
+      return;
+    }
+    if(document.getElementById(ROOT_ID)) return; // уже вставлено
+
+    var titleEl = anchor.parentNode;
+    if(!titleEl) return;
+
+    // Найти ближайший прокручиваемый контейнер (родитель повыше)
+    var container = titleEl;
+    for(var hops=0; hops<10 && container && container.parentNode; hops++){
+      var p = container.parentNode;
+      if(!p || p === document.body) break;
+      container = p;
+      try{
+        var st = window.getComputedStyle(container);
+        if(st && (st.overflowY === 'auto' || st.overflowY === 'scroll')) break;
+      }catch(e){}
+    }
+    if(!container) container = titleEl.parentNode;
+
+    var root = buildRoot();
+    container.appendChild(root);
+    bindTooltip(root);
+  }
+
+  function bindTooltip(root){
+    var tt = document.createElement('div');
+    tt.className = 'ls-tt';
+    document.body.appendChild(tt);
+    function show(ev, txt){
+      tt.textContent = txt;
+      tt.style.left = (ev.clientX + 12) + 'px';
+      tt.style.top = (ev.clientY + 12) + 'px';
+      tt.classList.add('visible');
+    }
+    function hide(){ tt.classList.remove('visible'); }
+    root.addEventListener('mousemove', function(ev){
+      var t = ev.target;
+      while(t && t !== root){
+        if(t.getAttribute && t.getAttribute('data-tt')){
+          show(ev, t.getAttribute('data-tt'));
+          return;
+        }
+        t = t.parentNode;
+      }
+      hide();
+    });
+    root.addEventListener('mouseleave', hide);
+    // Чтобы при перерендере root tooltip не оставался
+    root.__lira_tt = tt;
+  }
+
+  // Реагировать на смену маршрута + DOM-мутации.
+  var lastPath = '';
+  function tick(){
+    var p = location.pathname || '';
+    if(p !== lastPath){
+      lastPath = p;
+      var existing = document.getElementById(ROOT_ID);
+      if(existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    }
+    // Если есть root, но якоря больше нет (другая вкладка) — снести.
+    var existing = document.getElementById(ROOT_ID);
+    if(existing && !findAnchorNode()){
+      existing.parentNode && existing.parentNode.removeChild(existing);
+      return;
+    }
+    tryInject();
+  }
+  setInterval(tick, 500);
+  window.addEventListener('popstate', tick);
+  window.addEventListener('hashchange', tick);
+
+  // MutationObserver: если ре-рендер бандла снёс наш root, заинжектить заново
+  try{
+    var mo = new MutationObserver(function(){
+      if(!document.getElementById(ROOT_ID) && findAnchorNode()) tryInject();
+    });
+    mo.observe(document.body, {childList:true, subtree:true});
+  }catch(e){}
+
+  // Перерендер при изменениях в localStorage (новые логи)
+  window.addEventListener('storage', function(ev){
+    if(ev && ev.key && ev.key !== STORAGE_KEY) return;
+    var existing = document.getElementById(ROOT_ID);
+    if(existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    tryInject();
+  });
+
+  // QA helper
+  try{
+    window.__liraStatsReinject = function(){
+      var existing = document.getElementById(ROOT_ID);
+      if(existing && existing.parentNode) existing.parentNode.removeChild(existing);
+      tryInject();
+    };
+  }catch(e){}
+})();
+</script>
+
+<!-- LIRA_SUBSCRIPTION_MGMT_INJECTED -->
+<style id="lira-sub-mgmt-style">
+  .lira-sub-mgmt-card{margin:0 0 18px;padding:20px 22px;border-radius:24px;background:#FFFCF7;border:1px solid #EADBC4;box-shadow:0 8px 22px rgba(142,111,88,0.10);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#3D2C1E;display:flex;flex-direction:column;gap:14px}
+  .lira-sub-mgmt-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .lira-sub-mgmt-eyebrow{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#B97A57;margin:0}
+  .lira-sub-mgmt-title{margin:4px 0 0;font-size:22px;font-weight:600;color:#3D2C1E;letter-spacing:-0.2px;line-height:1.2}
+  .lira-sub-mgmt-badge{font-size:11px;font-weight:700;padding:5px 10px;border-radius:999px;letter-spacing:0.3px;text-transform:uppercase;flex-shrink:0;margin-top:4px}
+  .lira-sub-mgmt-badge.active{background:#E8F0E2;color:#4F7A3F}
+  .lira-sub-mgmt-badge.cancelled{background:#FBE0D5;color:#A05A36}
+  .lira-sub-mgmt-badge.free{background:#F1E5D2;color:#7E5A3A}
+  .lira-sub-mgmt-rows{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:14px;background:#FBF3E6;border:1px solid #F1E5D2}
+  .lira-sub-mgmt-row{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px;color:#5C4733;line-height:1.4}
+  .lira-sub-mgmt-row span{color:#8E7156}
+  .lira-sub-mgmt-row b{color:#3D2C1E;font-weight:600;text-align:right}
+  .lira-sub-mgmt-hint{margin:0;font-size:13px;color:#7E5A3A;line-height:1.45}
+  .lira-sub-mgmt-actions{display:flex;flex-direction:column;gap:8px}
+  .lira-sub-mgmt-btn{height:44px;border-radius:14px;border:1px solid transparent;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:0.2px;transition:filter 0.12s ease,opacity 0.12s ease}
+  .lira-sub-mgmt-btn.primary{background:#B97A57;color:#FFFCF7;border-color:#B97A57}
+  .lira-sub-mgmt-btn.primary:hover{filter:brightness(1.05)}
+  .lira-sub-mgmt-btn.ghost{background:transparent;color:#B97A57;border-color:#E0C9A8}
+  .lira-sub-mgmt-btn.ghost:hover{background:#FBF3E6}
+  .lira-sub-mgmt-btn.danger{background:transparent;color:#A05A36;border-color:#E8C4AC}
+  .lira-sub-mgmt-btn.danger:hover{background:#FBE0D5}
+  .lira-sub-mgmt-confirm{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:14px;background:#FBE0D5;border:1px solid #E8C4AC}
+  .lira-sub-mgmt-confirm-text{margin:0;font-size:13px;color:#7A3F1E;line-height:1.45}
+  .lira-sub-mgmt-confirm-row{display:flex;gap:8px}
+  .lira-sub-mgmt-confirm-row .lira-sub-mgmt-btn{flex:1;height:38px;font-size:13px}
+</style>
+<script id="lira-sub-mgmt-script">
+(function(){
+  'use strict';
+  var APP_KEY = '@cycle-tracker/data/v1';
+  var MGMT_ID = 'lira-sub-management';
+  var ANCHOR_RU = 'Твоя тайная коробка заботы';
+  var SYNC_TITLE_RU = 'Синхронизация с Telegram';
+  var NATIVE_STATUS_TITLE_RU = 'Подписка активна';
+
+  var TIER_LABEL = {
+    free: 'Бесплатный',
+    premium: 'Lira Premium',
+    basic: 'Твой ритм — базовый бокс',
+    vip: 'Полная симфония — премиум-бокс'
+  };
+  var TIER_EYEBROW = {
+    free: 'Бесплатный план',
+    premium: 'Цифровая подписка',
+    basic: 'Базовый бокс',
+    vip: 'Премиум-бокс'
+  };
+
+  function loadData(){
+    try{ return JSON.parse(localStorage.getItem(APP_KEY) || '{}'); }catch(e){ return {}; }
+  }
+  function saveData(d){
+    try{ localStorage.setItem(APP_KEY, JSON.stringify(d)); }catch(e){}
+  }
+  function getSub(){
+    var d = loadData();
+    return Object.assign({tier:'free',renewsAt:null,startedAt:null,cancelled:false}, d.subscription || {});
+  }
+  function setSubPatch(patch){
+    var d = loadData();
+    d.subscription = Object.assign({}, d.subscription || {}, patch);
+    saveData(d);
+  }
+
+  function fmtDate(iso){
+    if(!iso) return '—';
+    try{
+      return new Date(iso).toLocaleDateString('ru-RU', {day:'numeric', month:'long', year:'numeric'});
+    }catch(e){ return iso; }
+  }
+  function daysUntil(iso){
+    if(!iso) return null;
+    try{
+      var ms = new Date(iso).getTime() - Date.now();
+      return Math.max(0, Math.ceil(ms / 86400000));
+    }catch(e){ return null; }
+  }
+
+  // Walk text nodes for an exact-match string.
+  function findTextNode(text){
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    var node;
+    while((node = walker.nextNode())){
+      var t = (node.nodeValue || '').replace(/\s+/g, ' ').trim();
+      if(t === text) return node;
+    }
+    return null;
+  }
+
+  // Walk up to find the scrollable ancestor.
+  function findScrollAncestor(el){
+    var cur = el;
+    for(var i=0; i<12 && cur && cur.parentElement; i++){
+      cur = cur.parentElement;
+      try{
+        var st = window.getComputedStyle(cur);
+        if(st && (st.overflowY === 'auto' || st.overflowY === 'scroll')) return cur;
+      }catch(e){}
+    }
+    return null;
+  }
+
+  // Find the container that holds direct content children (cards) inside the scroll view.
+  // Anchor element's nearest big parent is usually a flex column wrapping all sections.
+  function findContentContainer(anchorTextNode){
+    var titleEl = anchorTextNode.parentNode;
+    if(!titleEl) return null;
+    // Walk up until we find an element whose grandchildren list looks like multiple cards.
+    var cur = titleEl;
+    for(var i=0; i<8 && cur && cur.parentElement; i++){
+      var p = cur.parentElement;
+      if(p && p.children && p.children.length >= 3) return p;
+      cur = p;
+    }
+    return cur || null;
+  }
+
+  function hideCardByTitle(titleText){
+    var titleNode = findTextNode(titleText);
+    if(!titleNode) return false;
+    // titleNode is a text node inside the title view. The card is the closest
+    // ancestor that has multiple children (title + hint + buttons).
+    var card = titleNode.parentNode;
+    for(var i=0; i<6 && card && card.parentElement; i++){
+      var parent = card.parentElement;
+      if(parent.children && parent.children.length >= 3){
+        card = parent;
+        break;
+      }
+      card = parent;
+    }
+    if(card && card.style) card.style.display = 'none';
+    return true;
+  }
+
+  function hideSyncCard(){
+    return hideCardByTitle(SYNC_TITLE_RU);
+  }
+  function hideNativeStatusCard(){
+    return hideCardByTitle(NATIVE_STATUS_TITLE_RU);
+  }
+
+  function renderManagementCard(){
+    if(document.getElementById(MGMT_ID)) return false;
+    var titleNode = findTextNode(ANCHOR_RU);
+    if(!titleNode) return false;
+    var container = findContentContainer(titleNode);
+    if(!container) return false;
+
+    var sub = getSub();
+    var tier = sub.tier || 'free';
+    var cancelled = !!sub.cancelled;
+    var renewsAt = sub.renewsAt;
+    var leftDays = daysUntil(renewsAt);
+
+    var card = document.createElement('div');
+    card.id = MGMT_ID;
+    card.className = 'lira-sub-mgmt-card';
+
+    var badgeClass = tier === 'free' ? 'free' : (cancelled ? 'cancelled' : 'active');
+    var badgeText = tier === 'free' ? 'Бесплатный' : (cancelled ? 'Отменена' : 'Активна');
+
+    var rowsHtml = '';
+    if(tier !== 'free'){
+      rowsHtml += '<div class="lira-sub-mgmt-row"><span>Тариф</span><b>' + TIER_LABEL[tier] + '</b></div>';
+      rowsHtml += '<div class="lira-sub-mgmt-row"><span>' + (cancelled ? 'Действует до' : 'Следующее списание') + '</span><b>' + fmtDate(renewsAt) + '</b></div>';
+      if(leftDays !== null){
+        rowsHtml += '<div class="lira-sub-mgmt-row"><span>Осталось</span><b>' + leftDays + ' дн.</b></div>';
+      }
+    }
+
+    var hintHtml = '';
+    if(tier === 'free'){
+      hintHtml = '<p class="lira-sub-mgmt-hint">Сейчас ты пользуешься бесплатной версией. Выбери тариф ниже, чтобы получать боксы заботы или открыть Premium-аналитику.</p>';
+    } else if(cancelled){
+      hintHtml = '<p class="lira-sub-mgmt-hint">Подписка отменена. Доступ сохранится до даты выше — потом перейдёшь на бесплатный план.</p>';
+    } else {
+      hintHtml = '<p class="lira-sub-mgmt-hint">Подписка активна. Спишется автоматически в дату следующего списания. Можешь отменить в любой момент.</p>';
+    }
+
+    var actionsHtml = '<div class="lira-sub-mgmt-actions">';
+    actionsHtml += '<button type="button" class="lira-sub-mgmt-btn ghost" data-action="scroll-to-plans">Сменить тариф</button>';
+    if(tier !== 'free' && !cancelled){
+      actionsHtml += '<button type="button" class="lira-sub-mgmt-btn danger" data-action="cancel">Отменить подписку</button>';
+    }
+    if(tier !== 'free' && cancelled){
+      actionsHtml += '<button type="button" class="lira-sub-mgmt-btn primary" data-action="resume">Возобновить подписку</button>';
+      actionsHtml += '<button type="button" class="lira-sub-mgmt-btn ghost" data-action="reset">Перейти на бесплатный сейчас</button>';
+    }
+    actionsHtml += '</div>';
+
+    card.innerHTML =
+      '<div class="lira-sub-mgmt-head">' +
+        '<div>' +
+          '<p class="lira-sub-mgmt-eyebrow">' + (TIER_EYEBROW[tier] || 'Подписка') + '</p>' +
+          '<h2 class="lira-sub-mgmt-title">Управление подпиской</h2>' +
+        '</div>' +
+        '<span class="lira-sub-mgmt-badge ' + badgeClass + '">' + badgeText + '</span>' +
+      '</div>' +
+      (rowsHtml ? '<div class="lira-sub-mgmt-rows">' + rowsHtml + '</div>' : '') +
+      hintHtml +
+      actionsHtml;
+
+    // Insert as the FIRST child of the content container so it sits above the
+    // hero title. If that ends up looking weird visually, the styled card
+    // already has its own background, so it stands on its own.
+    container.insertBefore(card, container.firstChild);
+
+    // Wire up clicks
+    card.addEventListener('click', function(ev){
+      var btn = ev.target && ev.target.closest && ev.target.closest('[data-action]');
+      if(!btn) return;
+      var action = btn.getAttribute('data-action');
+      if(action === 'scroll-to-plans'){
+        var hero = findTextNode(ANCHOR_RU);
+        if(hero && hero.parentNode && hero.parentNode.scrollIntoView){
+          hero.parentNode.scrollIntoView({behavior:'smooth', block:'start'});
+        }
+        return;
+      }
+      if(action === 'cancel'){
+        showConfirm(card, 'Отменить подписку? Доступ сохранится до даты следующего списания.', function(){
+          setSubPatch({cancelled:true});
+          rerender();
+        });
+        return;
+      }
+      if(action === 'resume'){
+        setSubPatch({cancelled:false});
+        rerender();
+        return;
+      }
+      if(action === 'reset'){
+        showConfirm(card, 'Перейти на бесплатный план прямо сейчас? Это отменит активный доступ.', function(){
+          setSubPatch({tier:'free', cancelled:false, productId:null, startedAt:null, renewsAt:null});
+          rerender();
+        });
+        return;
+      }
+    });
+
+    return true;
+  }
+
+  function showConfirm(card, text, onYes){
+    // Replace actions area with inline confirmation
+    var existing = card.querySelector('.lira-sub-mgmt-confirm');
+    if(existing) existing.remove();
+    var actions = card.querySelector('.lira-sub-mgmt-actions');
+    var confirm = document.createElement('div');
+    confirm.className = 'lira-sub-mgmt-confirm';
+    confirm.innerHTML =
+      '<p class="lira-sub-mgmt-confirm-text">' + text + '</p>' +
+      '<div class="lira-sub-mgmt-confirm-row">' +
+        '<button type="button" class="lira-sub-mgmt-btn ghost" data-confirm="no">Отмена</button>' +
+        '<button type="button" class="lira-sub-mgmt-btn danger" data-confirm="yes">Да</button>' +
+      '</div>';
+    if(actions) actions.parentNode.insertBefore(confirm, actions.nextSibling);
+    confirm.addEventListener('click', function(ev){
+      var b = ev.target && ev.target.closest && ev.target.closest('[data-confirm]');
+      if(!b) return;
+      if(b.getAttribute('data-confirm') === 'yes') onYes();
+      confirm.remove();
+    });
+  }
+
+  function rerender(){
+    var existing = document.getElementById(MGMT_ID);
+    if(existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    renderManagementCard();
+  }
+
+  function tick(){
+    // Only act if Subscription anchor is currently in DOM.
+    var anchor = findTextNode(ANCHOR_RU);
+    if(!anchor){
+      // We're on another tab — remove our card if it was injected.
+      var existing = document.getElementById(MGMT_ID);
+      if(existing && existing.parentNode) existing.parentNode.removeChild(existing);
+      return;
+    }
+    hideSyncCard();
+    hideNativeStatusCard();
+    renderManagementCard();
+  }
+
+  setInterval(tick, 500);
+  window.addEventListener('popstate', tick);
+  window.addEventListener('hashchange', tick);
+
+  try{
+    var mo = new MutationObserver(function(){ tick(); });
+    mo.observe(document.body, {childList:true, subtree:true});
+  }catch(e){}
+
+  // Re-render if storage changed (e.g. another tab updated subscription).
+  window.addEventListener('storage', function(ev){
+    if(ev && ev.key && ev.key !== APP_KEY) return;
+    rerender();
+  });
+
+  // QA helper
+  try{ window.__liraSubMgmtRerender = rerender; }catch(e){}
+})();
+</script>
+<!-- LIRA_SUBSCRIPTION_MGMT_INJECTED -->
+
+<style id="lira-tab-style">
+  .lira-chat-overlay{position:fixed;left:0;right:0;top:0;bottom:84px;background:#FFF5E8;z-index:9998;display:none;flex-direction:column;}
+  .lira-tab-injected.lira-tab-active a > div > div > svg circle:last-child{r:3.2;}
+  .lira-tab-injected.lira-tab-active a > div + div{color:#7A2E5A !important;font-weight:600 !important;}
+  .lira-chat-overlay.open{display:flex;}
+  .lira-chat-header{padding:18px 20px 14px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #EFCDA8;background:#FFF5E8;}
+  .lira-chat-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#F4B5D2,#C45A8E);display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .lira-chat-title{font-weight:600;font-size:17px;color:#7A3F1E;flex:1;display:flex;flex-direction:column;}
+  .lira-chat-title .lira-chat-sub{font-size:12px;font-weight:400;color:#B8896A;margin-top:2px;}
+  .lira-chat-close{background:none;border:none;width:36px;height:36px;border-radius:50%;font-size:22px;color:#7A3F1E;cursor:pointer;}
+  .lira-chat-close:hover{background:rgba(196,90,142,0.08);}
+  .lira-chat-body{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch;}
+  .lira-msg{max-width:80%;padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.4;white-space:pre-wrap;word-wrap:break-word;}
+  .lira-msg.bot{align-self:flex-start;background:#F8E1CB;color:#5A2E0F;border-bottom-left-radius:6px;}
+  .lira-msg.user{align-self:flex-end;background:linear-gradient(135deg,#F4B5D2,#C45A8E);color:#FFFFFF;border-bottom-right-radius:6px;}
+  .lira-msg.typing{font-style:italic;opacity:0.7;}
+  .lira-chat-suggest{display:flex;flex-wrap:wrap;gap:8px;padding:0 18px 8px;}
+  .lira-chat-chip{background:#FFFFFF;border:1px solid #EFCDA8;border-radius:18px;padding:7px 12px;font-size:12px;color:#7A3F1E;cursor:pointer;}
+  .lira-chat-chip:hover{background:#FBE6CF;}
+  .lira-chat-input-row{display:flex;gap:8px;padding:10px 14px 18px;background:#FFF5E8;border-top:1px solid #EFCDA8;}
+  .lira-chat-input{flex:1;min-height:42px;max-height:120px;padding:10px 14px;border-radius:21px;border:1px solid #EFCDA8;background:#FFFFFF;font-size:14px;color:#5A2E0F;resize:none;outline:none;font-family:inherit;}
+  .lira-chat-input:focus{border-color:#C45A8E;}
+  .lira-chat-send{width:42px;height:42px;border-radius:50%;border:none;background:linear-gradient(135deg,#F4B5D2,#C45A8E);color:#FFFFFF;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .lira-chat-send:disabled{opacity:0.4;cursor:not-allowed;}
+  .lira-tab-injected{position:relative;}
+</style>
+
+<script id="lira-tab-script">
+(function(){
+  'use strict';
+  var TAB_ID = 'lira-tab-injected';
+  var OVERLAY_ID = 'lira-chat-overlay';
+  var STORAGE_KEY = '@lira/chat/v1';
+  var BACKEND_PATH = '/v1/lira/chat';
+
+  function getBackend(){
+    try{ if (window.__liraBackend && window.__liraBackend.url) return window.__liraBackend.url; }catch(e){}
+    return '';
+  }
+
+  function loadHistory(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return [];
+      var parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    }catch(e){ return []; }
+  }
+  function saveHistory(h){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(h.slice(-50))); }catch(e){}
+  }
+
+  function buildOverlay(){
+    if (document.getElementById(OVERLAY_ID)) return document.getElementById(OVERLAY_ID);
+    var overlay = document.createElement('div');
+    overlay.id = OVERLAY_ID;
+    overlay.className = 'lira-chat-overlay';
+    overlay.innerHTML = ''
+      + '<div class="lira-chat-header">'
+      +   '<div class="lira-chat-avatar">🌸</div>'
+      +   '<div class="lira-chat-title">Лира<span class="lira-chat-sub">Твоя тёплая помощница</span></div>'
+      +   '<button class="lira-chat-close" type="button" aria-label="Закрыть">×</button>'
+      + '</div>'
+      + '<div class="lira-chat-body" id="lira-chat-body"></div>'
+      + '<div class="lira-chat-suggest" id="lira-chat-suggest">'
+      +   '<button class="lira-chat-chip" type="button" data-q="Как облегчить ПМС?">Как облегчить ПМС?</button>'
+      +   '<button class="lira-chat-chip" type="button" data-q="Что есть во время месячных?">Что есть во время М?</button>'
+      +   '<button class="lira-chat-chip" type="button" data-q="Почему болит грудь перед месячными?">Болит грудь</button>'
+      + '</div>'
+      + '<div class="lira-chat-input-row">'
+      +   '<textarea class="lira-chat-input" id="lira-chat-input" rows="1" placeholder="Спроси Лиру что-нибудь…"></textarea>'
+      +   '<button class="lira-chat-send" id="lira-chat-send" type="button" aria-label="Отправить">➤</button>'
+      + '</div>';
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('.lira-chat-close').addEventListener('click', closeChat);
+
+    var input = overlay.querySelector('#lira-chat-input');
+    var sendBtn = overlay.querySelector('#lira-chat-send');
+    sendBtn.addEventListener('click', function(){ sendMessage(input.value); });
+    input.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' && !e.shiftKey){
+        e.preventDefault();
+        sendMessage(input.value);
+      }
+    });
+    overlay.querySelectorAll('.lira-chat-chip').forEach(function(chip){
+      chip.addEventListener('click', function(){
+        var q = chip.getAttribute('data-q');
+        if (q) sendMessage(q);
+      });
+    });
+
+    renderHistory();
+    return overlay;
+  }
+
+  function renderHistory(){
+    var body = document.getElementById('lira-chat-body');
+    if (!body) return;
+    body.innerHTML = '';
+    var history = loadHistory();
+    if (history.length === 0){
+      pushBot(body, 'Привет 🌸 Я Лира — рядом, если что-то про самочувствие, цикл или просто грустно. Спрашивай свободно.', false);
+    } else {
+      history.forEach(function(m){
+        var el = document.createElement('div');
+        el.className = 'lira-msg ' + (m.role === 'user' ? 'user' : 'bot');
+        el.textContent = m.text;
+        body.appendChild(el);
+      });
+    }
+    var suggest = document.getElementById('lira-chat-suggest');
+    if (suggest) suggest.style.display = history.length === 0 ? 'flex' : 'none';
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function pushBot(body, text, persist){
+    var el = document.createElement('div');
+    el.className = 'lira-msg bot';
+    el.textContent = text;
+    body.appendChild(el);
+    body.scrollTop = body.scrollHeight;
+    if (persist !== false){
+      var h = loadHistory();
+      h.push({role:'bot', text:text});
+      saveHistory(h);
+    }
+  }
+
+  function pushUser(body, text){
+    var el = document.createElement('div');
+    el.className = 'lira-msg user';
+    el.textContent = text;
+    body.appendChild(el);
+    body.scrollTop = body.scrollHeight;
+    var h = loadHistory();
+    h.push({role:'user', text:text});
+    saveHistory(h);
+  }
+
+  function sendMessage(text){
+    text = (text || '').trim();
+    if (!text) return;
+    var overlay = document.getElementById(OVERLAY_ID);
+    if (!overlay) return;
+    var body = overlay.querySelector('#lira-chat-body');
+    var input = overlay.querySelector('#lira-chat-input');
+    var sendBtn = overlay.querySelector('#lira-chat-send');
+    var suggest = overlay.querySelector('#lira-chat-suggest');
+
+    pushUser(body, text);
+    input.value = '';
+    if (suggest) suggest.style.display = 'none';
+    sendBtn.disabled = true;
+
+    var typingEl = document.createElement('div');
+    typingEl.className = 'lira-msg bot typing';
+    typingEl.textContent = 'Лира печатает…';
+    body.appendChild(typingEl);
+    body.scrollTop = body.scrollHeight;
+
+    var history = loadHistory();
+    var convo = history.filter(function(m){ return m.role === 'user' || m.role === 'bot'; }).slice(-12).map(function(m){
+      return { role: m.role === 'bot' ? 'assistant' : 'user', content: m.text };
+    });
+
+    var backend = getBackend();
+    var url = (backend || '') + BACKEND_PATH;
+    fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ messages: convo })
+    }).then(function(r){ return r.json(); }).then(function(data){
+      typingEl.remove();
+      var reply = (data && (data.reply || data.message || data.text)) || 'Лира задумалась, попробуй ещё раз через минутку 🌸';
+      pushBot(body, reply, true);
+    }).catch(function(){
+      typingEl.remove();
+      pushBot(body, 'Ой, не получается дозвониться до Лиры. Попробуй ещё раз через минутку 🌸', true);
+    }).finally(function(){
+      sendBtn.disabled = false;
+      input.focus();
+    });
+  }
+
+  function positionOverlay(overlay){
+    try{
+      var tablist = document.querySelector('[role="tablist"]');
+      if (!tablist || !overlay) return;
+      var bar = tablist.parentElement;
+      var rect = bar.getBoundingClientRect();
+      // App card boundaries: same horizontal extent as the tab bar; vertical from
+      // top of viewport (or top of card) down to the top of the tab bar.
+      var card = bar.parentElement; // container that holds content + tab bar
+      var cardRect = card ? card.getBoundingClientRect() : {top:0, bottom:window.innerHeight, left:rect.left, right:rect.right};
+      var topPx = Math.max(0, cardRect.top);
+      var leftPx = Math.max(0, rect.left);
+      var rightPx = Math.max(0, window.innerWidth - rect.right);
+      var bottomPx = Math.max(0, window.innerHeight - rect.top);
+      overlay.style.left = leftPx + 'px';
+      overlay.style.right = rightPx + 'px';
+      overlay.style.top = topPx + 'px';
+      overlay.style.bottom = bottomPx + 'px';
+    }catch(_){ }
+  }
+
+  function openChat(){
+    var overlay = buildOverlay();
+    overlay.classList.add('open');
+    positionOverlay(overlay);
+    var tab = document.getElementById(TAB_ID);
+    if (tab) tab.classList.add('lira-tab-active');
+    var tabA = tab && tab.querySelector('a');
+    if (tabA) tabA.setAttribute('aria-selected', 'true');
+    setTimeout(function(){
+      var input = overlay.querySelector('#lira-chat-input');
+      if (input) input.focus();
+    }, 50);
+  }
+
+  function closeChat(){
+    var overlay = document.getElementById(OVERLAY_ID);
+    if (overlay) overlay.classList.remove('open');
+    var tab = document.getElementById(TAB_ID);
+    if (tab) tab.classList.remove('lira-tab-active');
+    var tabA = tab && tab.querySelector('a');
+    if (tabA) tabA.setAttribute('aria-selected', 'false');
+  }
+
+  window.__liraOpenChat = openChat;
+
+  function ensureTab(){
+    var tablist = document.querySelector('[role="tablist"]');
+    if (!tablist) return false;
+    if (tablist.querySelector('#' + TAB_ID)) return true;
+    var tabs = tablist.children;
+    if (!tabs || tabs.length < 2) return false;
+    // Find the highest order value so our tab goes last
+    var maxOrder = 0;
+    for (var i = 0; i < tabs.length; i++){
+      var ord = parseInt(tabs[i].style.order || '0', 10) || 0;
+      if (ord > maxOrder) maxOrder = ord;
+    }
+    var wrapper = document.createElement('div');
+    wrapper.id = TAB_ID;
+    wrapper.style.cssText = 'flex:1 1 0%;border-radius:0;overflow:visible;order:' + (maxOrder + 1) + ';display:flex;';
+    wrapper.innerHTML = ''
+      + '<a href="#lira" role="tab" aria-selected="false" tabindex="0" style="cursor:pointer;flex:1 1 0%;background-color:rgba(0,0,0,0);border-radius:0;opacity:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-decoration:none;padding:4px 2px;">'
+      +   '<div style="display:flex;align-items:center;justify-content:center;min-width:25px;height:25px;margin-bottom:2px;">'
+      +     '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">'
+      +       '<g>'
+      +         '<ellipse cx="12" cy="6" rx="3" ry="4" fill="#F4B5D2"/>'
+      +         '<ellipse cx="12" cy="18" rx="3" ry="4" fill="#F4B5D2"/>'
+      +         '<ellipse cx="6" cy="12" rx="4" ry="3" fill="#F4B5D2"/>'
+      +         '<ellipse cx="18" cy="12" rx="4" ry="3" fill="#F4B5D2"/>'
+      +         '<circle cx="12" cy="12" r="2.8" fill="#C45A8E"/>'
+      +       '</g>'
+      +     '</svg>'
+      +   '</div>'
+      +   '<div dir="ltr" style="color:#C45A8E;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-weight:500;font-size:11px;letter-spacing:0.4px;line-height:13px;white-space:nowrap;">Лира</div>'
+      + '</a>';
+    var a = wrapper.querySelector('a');
+    a.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      openChat();
+    });
+    tablist.appendChild(wrapper);
+    return true;
+  }
+
+  function tick(){
+    try{ ensureTab(); }catch(e){}
+  }
+
+  if (document.readyState !== 'loading'){
+    setTimeout(tick, 0);
+  } else {
+    document.addEventListener('DOMContentLoaded', tick);
+  }
+  try{
+    var mo = new MutationObserver(function(){ tick(); });
+    mo.observe(document.body, {childList:true, subtree:true});
+  }catch(e){}
+
+  // Listen for SPA navigation — re-attach if tab bar re-renders
+  var lastUrl = location.href;
+  setInterval(function(){
+    if (location.href !== lastUrl){ lastUrl = location.href; setTimeout(tick, 100); }
+  }, 500);
+  // Close chat when user taps any *other* tab in the bottom bar.
+  document.addEventListener('click', function(ev){
+    var t = ev.target;
+    while (t && t !== document.body){
+      if (t.id === OVERLAY_ID) return; // click inside chat, ignore
+      if (t.tagName === 'A' && t.getAttribute && t.getAttribute('role') === 'tab' && t.getAttribute('href') !== '#lira'){
+        closeChat();
+        return;
+      }
+      t = t.parentElement;
+    }
+  }, true);
+  window.addEventListener('resize', function(){
+    var overlay = document.getElementById(OVERLAY_ID);
+    if (overlay && overlay.classList.contains('open')) positionOverlay(overlay);
+  });
+})();
+</script>
+<!-- LIRA_TAB_INJECTED -->
+
+</body>
+</html>

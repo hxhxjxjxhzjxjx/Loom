@@ -1,0 +1,43 @@
+# /etc/fail2ban/jail.local — Lira hardening
+[DEFAULT]
+# Бан на 1 час за 5 нарушений в течение 10 минут
+bantime  = 1h
+findtime = 10m
+maxretry = 5
+backend = systemd
+# Имеешь статический IP — впиши его сюда через пробел, чтобы случайно не забаниться
+ignoreip = 127.0.0.1/8 ::1
+
+[sshd]
+enabled = true
+port    = ssh
+filter  = sshd
+mode    = aggressive
+logpath = %(sshd_log)s
+
+[nginx-botsearch]
+enabled  = true
+port     = http,https
+filter   = nginx-botsearch
+logpath  = /var/log/nginx/lira.error.log
+          /var/log/nginx/error.log
+maxretry = 3
+findtime = 10m
+bantime  = 6h
+
+[nginx-http-auth]
+enabled  = true
+port     = http,https
+filter   = nginx-http-auth
+logpath  = /var/log/nginx/lira.error.log
+          /var/log/nginx/error.log
+
+[nginx-limit-req]
+enabled  = true
+port     = http,https
+filter   = nginx-limit-req
+logpath  = /var/log/nginx/lira.error.log
+          /var/log/nginx/error.log
+maxretry = 10
+findtime = 5m
+bantime  = 1h

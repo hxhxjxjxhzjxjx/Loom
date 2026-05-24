@@ -1,0 +1,46 @@
+services:
+  api:
+    build: .
+    image: lira:latest
+    container_name: lira-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:////data/app.db
+      API_HOST: 0.0.0.0
+      API_PORT: "8000"
+      # When the bot profile is enabled, we set RUN_BOT_IN_API=0 from
+      # setup.sh so Telegram is only polled by the dedicated bot container.
+      # Two getUpdates pollers per token would otherwise fight each other.
+      RUN_BOT_IN_API: ${RUN_BOT_IN_API:-1}
+    volumes:
+      - lira-data:/data
+    # Bind only to 127.0.0.1 so the raw HTTP API is unreachable from the
+    # internet — Caddy (host port 443) proxies it with HTTPS + headers.
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  bot:
+    image: lira:latest
+    container_name: lira-bot
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:////data/app.db
+    volumes:
+      - lira-data:/data
+    working_dir: /app/backend
+    command: ["python", "-m", "bot.main"]
+    profiles: ["bot"]
+
+volumes:
+  lira-data:

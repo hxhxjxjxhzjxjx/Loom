@@ -1,0 +1,114 @@
+/* Shared styles for Lira static legal/info pages.
+   The design matches the app: warm sand background, deep brown text,
+   muted brown accents. Pages are framed by a centered narrow column
+   so long policy text stays readable on desktop. */
+:root {
+  --bg: #FFFCF7;
+  --bg-soft: #FBF3E6;
+  --border: #EADBC4;
+  --text: #3D2C1E;
+  --text-soft: #5C4733;
+  --muted: #8E7156;
+  --accent: #B97A57;
+  --link: #7A2E5A;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+header.lira-header {
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 18px 24px;
+  display: flex; align-items: center; gap: 12px;
+  position: sticky; top: 0; z-index: 10;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+header.lira-header a.brand {
+  display: flex; align-items: center; gap: 10px;
+  color: var(--text); font-weight: 600; font-size: 18px;
+  letter-spacing: -0.2px;
+}
+header.lira-header .spacer { flex: 1; }
+header.lira-header .home {
+  border: 1px solid var(--border); padding: 8px 16px;
+  border-radius: 20px; color: var(--text-soft);
+  font-size: 14px; background: var(--bg);
+}
+
+main.lira-main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+h1.lira-title {
+  font-size: 28px; line-height: 1.25;
+  letter-spacing: -0.4px; margin: 8px 0 24px;
+  color: var(--text); font-weight: 600;
+}
+h2 {
+  font-size: 19px; font-weight: 600;
+  margin: 36px 0 12px; letter-spacing: -0.2px;
+  color: var(--text);
+}
+h3 {
+  font-size: 16px; font-weight: 600;
+  margin: 24px 0 8px;
+  color: var(--text);
+}
+p, li { color: var(--text-soft); }
+ul, ol { padding-left: 22px; margin: 8px 0 16px; }
+li { margin: 4px 0; }
+.lira-lead {
+  font-size: 15px; color: var(--text-soft);
+  background: var(--bg-soft); border: 1px solid var(--border);
+  padding: 16px 18px; border-radius: 14px;
+  margin: 0 0 24px;
+}
+.lira-note {
+  font-size: 13px; color: var(--muted); margin: 24px 0 0;
+}
+table.lira-table {
+  width: 100%; border-collapse: collapse;
+  margin: 12px 0; font-size: 14px;
+}
+table.lira-table th, table.lira-table td {
+  text-align: left; padding: 10px 12px;
+  border-bottom: 1px solid var(--border); vertical-align: top;
+}
+table.lira-table th { color: var(--muted); font-weight: 600; }
+
+footer.lira-footer {
+  border-top: 1px solid var(--border);
+  padding: 28px 24px;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.7;
+}
+footer.lira-footer .links {
+  margin-bottom: 8px;
+  display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+}
+footer.lira-footer .links a { color: var(--text-soft); }
+
+.lira-placeholder {
+  display: inline-block;
+  background: #FFF1D8; padding: 1px 6px; border-radius: 4px;
+  color: #8B5A2A; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.9em; border: 1px dashed #D9A86C;
+}
+
+@media (max-width: 540px) {
+  h1.lira-title { font-size: 24px; }
+  main.lira-main { padding: 20px 18px 60px; }
+}

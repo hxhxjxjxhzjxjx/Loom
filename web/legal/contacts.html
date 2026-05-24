@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#7A2E5A">
+<meta name="robots" content="index,follow">
+<title>Контакты — Lira</title>
+<link rel="stylesheet" href="/legal/style.css">
+<link rel="icon" href="/favicon.ico">
+<style>
+  .contact-card {
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: 18px; padding: 22px 22px 18px;
+    margin: 12px 0 20px;
+  }
+  .contact-card h3 { margin: 0 0 6px; }
+  .contact-card .v { font-size: 17px; color: var(--text); font-weight: 600; }
+  .contact-card .v a { color: var(--text); }
+</style>
+</head>
+<body>
+
+<header class="lira-header">
+  <a class="brand" href="/">🌸 Lira</a>
+  <span class="spacer"></span>
+  <a class="home" href="/">В приложение</a>
+</header>
+
+<main class="lira-main">
+  <h1 class="lira-title">Контакты</h1>
+
+  <p class="lira-lead">
+    Если что-то непонятно, что-то не работает, или нужно вернуть деньги — пиши нам. Отвечаем
+    в течение 1 рабочего дня.
+  </p>
+
+  <div class="contact-card">
+    <h3>E-mail поддержки</h3>
+    <div class="v">
+      <a href="mailto:#" data-seller="email-link"><span data-seller="email">support@lira.example.ru</span></a>
+    </div>
+    <p>Для любых вопросов, в том числе возвратов и запросов на удаление данных по 152-ФЗ.</p>
+  </div>
+
+  <div class="contact-card">
+    <h3>Telegram</h3>
+    <div class="v" data-seller="tg">@lira_support_bot</div>
+    <p>Быстрые вопросы и неполадки с приложением. Работаем по будням 10:00-19:00 МСК.</p>
+  </div>
+
+  <div class="contact-card">
+    <h3>Реквизиты</h3>
+    <div class="v" data-seller="name">[ИП / ООО]</div>
+    <p>
+      ИНН: <span data-seller="inn">[ИНН]</span><br>
+      ОГРН: <span data-seller="ogrn">[ОГРН]</span><br>
+      Юридический адрес: <span data-seller="address">[адрес]</span>
+    </p>
+  </div>
+
+  <h2>Возвраты и претензии</h2>
+  <p>
+    Все возвраты и претензии принимаем по email с пометкой <b>«Возврат»</b> или <b>«Претензия»</b>
+    в теме письма. Укажи номер заказа и причину. Ответ — в течение 10 рабочих дней.
+    Подробнее в <a href="/legal/offer.html">договоре-оферте</a>.
+  </p>
+
+  <h2>Удаление данных</h2>
+  <p>
+    Чтобы удалить свои данные с серверов — напиши на email поддержки с пометкой
+    <b>«Удалить мои данные»</b> с того же email или Telegram-аккаунта, на который оформлена подписка.
+    Срок удаления — до 30 дней по 152-ФЗ.
+  </p>
+
+  <p class="lira-note">Локальные данные (история цикла, заметки) ты можешь удалить сама — Настройки браузера → Конфиденциальность → Очистить данные сайта.</p>
+
+  <div id="lira-footer-slot"></div>
+</main>
+
+<script src="/legal/footer.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('a[data-seller="email-link"]').forEach(function(a){
+      var span = a.querySelector('[data-seller="email"]');
+      if (span) a.href = 'mailto:' + span.textContent;
+    });
+  });
+</script>
+</body>
+</html>

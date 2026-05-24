@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#7A2E5A">
+<meta name="description" content="Lira — забота о женском цикле каждый месяц. Трекер, прогноз, чат-ассистент и боксы заботы.">
+<meta name="robots" content="index,follow">
+<title>О сервисе — Lira</title>
+<link rel="stylesheet" href="/legal/style.css">
+<link rel="icon" href="/favicon.ico">
+<style>
+  .hero {
+    text-align: center;
+    padding: 40px 0 24px;
+  }
+  .hero .emoji { font-size: 56px; line-height: 1; }
+  .hero h1 { font-size: 34px; margin: 12px 0 10px; letter-spacing: -0.6px; }
+  .hero p.tagline { font-size: 17px; color: var(--text-soft); margin: 0 auto; max-width: 520px; }
+  .cards {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    margin: 28px 0;
+  }
+  @media (max-width: 540px) { .cards { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: 16px; padding: 18px 18px 16px;
+  }
+  .card .icon { font-size: 24px; margin-bottom: 8px; }
+  .card h3 { margin: 4px 0 6px; font-size: 16px; }
+  .card p { font-size: 14px; margin: 0; line-height: 1.5; }
+  .cta {
+    display: block; text-align: center;
+    background: var(--accent); color: #fff;
+    padding: 14px 24px; border-radius: 28px;
+    font-weight: 600; letter-spacing: 0.2px;
+    margin: 24px auto 8px; max-width: 280px;
+    box-shadow: 0 6px 18px rgba(185,122,87,0.3);
+  }
+  .cta:hover { text-decoration: none; filter: brightness(1.05); }
+</style>
+</head>
+<body>
+
+<header class="lira-header">
+  <a class="brand" href="/">🌸 Lira</a>
+  <span class="spacer"></span>
+  <a class="home" href="/">В приложение</a>
+</header>
+
+<main class="lira-main">
+  <div class="hero">
+    <div class="emoji">🌸</div>
+    <h1>Каждый месяц — с заботой</h1>
+    <p class="tagline">Lira — это твой личный ассистент по женскому циклу: прогноз, поддержка, и боксы с заботой, которые приходят ровно тогда, когда нужны.</p>
+  </div>
+
+  <a class="cta" href="/">Открыть приложение</a>
+
+  <h2>Что умеет Lira</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="icon">📅</div>
+      <h3>Точный прогноз цикла</h3>
+      <p>Считаем дни месячных, овуляции и фертильное окно на 3 месяца вперёд. Чем дольше пользуешься — тем точнее.</p>
+    </div>
+    <div class="card">
+      <div class="icon">💬</div>
+      <h3>Ассистентка Лира</h3>
+      <p>Тёплый чат-помощник, который ответит на вопросы о цикле, симптомах и самочувствии. Без оценок.</p>
+    </div>
+    <div class="card">
+      <div class="icon">📦</div>
+      <h3>Бокс заботы</h3>
+      <p>Раз в месяц, за 3-5 дней до начала, мы привозим коробочку с тем, что облегчит эти дни.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🔔</div>
+      <h3>Мягкие напоминания</h3>
+      <p>За 3 дня предупредим о начале цикла, в день овуляции, при необходимости приёма витаминов.</p>
+    </div>
+  </div>
+
+  <h2>Почему Lira</h2>
+  <ul>
+    <li>Никакой рекламы внутри приложения — мы зарабатываем только на подписке.</li>
+    <li>Твои данные о цикле хранятся <b>локально</b> в браузере, мы их не видим и не продаём.</li>
+    <li>Подписка не продлевается автоматически — мы напоминаем, ты решаешь.</li>
+    <li>Возврат денег за неиспользованный период — без долгих переписок.</li>
+  </ul>
+
+  <h2>Тарифы</h2>
+  <table class="lira-table">
+    <thead>
+      <tr><th>Тариф</th><th>Цена</th><th>Что внутри</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>Basic</b></td>
+        <td>999&nbsp;₽/мес</td>
+        <td>Трекер + прогноз + чат с Лирой</td>
+      </tr>
+      <tr>
+        <td><b>VIP</b></td>
+        <td>1&nbsp;999&nbsp;₽/мес</td>
+        <td>Всё из Basic + физический бокс заботы каждый месяц с доставкой</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Возрастные ограничения</h2>
+  <p>
+    Сервис рассчитан на пользователей <b>16+</b>. Если тебе меньше — попроси согласие родителей.
+  </p>
+
+  <h2>Это не медицинский сервис</h2>
+  <p>
+    Прогнозы и советы Лиры не заменяют консультацию врача. По любым вопросам, связанным со здоровьем, —
+    обращайся к специалисту. Lira помогает наблюдать за своим телом, но не лечит и не ставит диагнозы.
+  </p>
+
+  <a class="cta" href="/">Попробовать бесплатно</a>
+
+  <div id="lira-footer-slot"></div>
+</main>
+
+<script src="/legal/footer.js" defer></script>
+</body>
+</html>
