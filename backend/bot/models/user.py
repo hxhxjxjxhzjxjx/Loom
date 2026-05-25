@@ -22,6 +22,22 @@ class User(Base):
     first_name: Mapped[str | None] = mapped_column(String(128))
     language_code: Mapped[str | None] = mapped_column(String(8))
 
+    # --- Partner mode ----------------------------------------------------- #
+    # Random read-only token. Anyone with /partner/<token> URL sees the
+    # cycle in a read-only view (next period date, current phase). Used
+    # to share the cycle with a partner (e.g. husband, girlfriend) via
+    # Telegram bot deep-link. NULL by default — user must opt in.
+    partner_token: Mapped[str | None] = mapped_column(
+        String(32), unique=True, index=True
+    )
+    # Telegram user_id of the partner who claimed the token via the
+    # bot's /start partner_<token> handler. Lets us send proactive
+    # notifications ("у Иры скоро ПМС") to the partner's Telegram.
+    partner_telegram_id: Mapped[int | None] = mapped_column(
+        BigInteger, unique=False, index=True, nullable=True
+    )
+    partner_name: Mapped[str | None] = mapped_column(String(128))
+
     profile: Mapped["Profile | None"] = relationship(
         "Profile", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )

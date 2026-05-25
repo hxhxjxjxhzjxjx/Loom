@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#7A2E5A">
+<meta name="description" content="Поделись прогнозом цикла с близким человеком. Read-only ссылка + Telegram-напоминания партнёру.">
+<meta name="robots" content="noindex,nofollow">
+<title>Поделиться с партнёром — Lira</title>
+<link rel="stylesheet" href="/legal/style.css">
+<link rel="icon" href="/favicon.ico">
+<style>
+  .invite-intro {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin: 0 0 24px;
+    font-size: 14px;
+    color: var(--text-soft);
+    line-height: 1.55;
+  }
+  .invite-intro b { color: var(--text); }
+
+  .invite-card {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin: 0 0 20px;
+  }
+  .invite-card h2 {
+    margin: 0 0 8px;
+    font-size: 17px; color: var(--text);
+  }
+  .invite-card p {
+    margin: 0 0 12px; line-height: 1.55;
+    color: var(--text-soft);
+  }
+  .invite-link {
+    display: flex; gap: 8px; align-items: stretch;
+    flex-wrap: wrap;
+  }
+  .invite-link input {
+    flex: 1 1 240px; min-width: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 14px; color: var(--text);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  .invite-link button {
+    background: var(--accent); color: #fff;
+    border: none; padding: 0 18px;
+    border-radius: 22px; font-size: 14px;
+    font-weight: 600; cursor: pointer; min-height: 40px;
+  }
+  .invite-link button.secondary {
+    background: transparent; color: var(--text-soft);
+    border: 1px solid var(--border);
+  }
+  .invite-link button:hover { filter: brightness(1.05); }
+
+  .invite-status {
+    font-size: 13px; color: var(--muted);
+    margin: 8px 0 0; min-height: 1.4em;
+  }
+  .invite-status.ok { color: #4f8a3a; }
+  .invite-status.error { color: #b13d3d; }
+
+  .invite-cta {
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 28px;
+    padding: 14px 22px;
+    font-size: 16px; font-weight: 600;
+    cursor: pointer; width: 100%;
+    box-shadow: 0 6px 18px rgba(185,122,87,0.3);
+  }
+  .invite-cta[disabled] { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+  .invite-list {
+    margin: 6px 0 0; padding: 0; list-style: none;
+  }
+  .invite-list li {
+    padding: 6px 0 6px 24px;
+    line-height: 1.55;
+    font-size: 14px;
+    color: var(--text-soft);
+    position: relative;
+  }
+  .invite-list li::before {
+    content: "·";
+    position: absolute; left: 8px;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .no-code {
+    background: rgba(185, 122, 87, 0.08);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    color: var(--text-soft);
+    margin: 16px 0;
+    line-height: 1.55;
+  }
+  .no-code b { color: var(--text); }
+  .no-code button {
+    background: var(--accent); color: #fff; border: none;
+    padding: 8px 16px; border-radius: 18px; cursor: pointer;
+    font-size: 14px; margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<header class="lira-header">
+  <a class="brand" href="/">🌸 Lira · Партнёр</a>
+  <span class="spacer"></span>
+  <a class="home" href="/">В приложение</a>
+</header>
+
+<main class="lira-main">
+  <h1 class="lira-title">Поделиться с партнёром</h1>
+
+  <div class="invite-intro">
+    Это ссылка для близкого человека (мужа, девушки, мамы), чтобы они
+    видели, <b>когда у тебя начнутся месячные</b>, и в нужный день могли
+    быть рядом. Никаких симптомов, дневника или чата — только сухие даты.
+  </div>
+
+  <div id="invite-host">
+    <div class="invite-card">
+      <p>Готовлю приглашение…</p>
+    </div>
+  </div>
+
+  <div class="invite-card" style="background: rgba(185, 122, 87, 0.05);">
+    <h2>Что увидит партнёр</h2>
+    <ul class="invite-list">
+      <li>Дата следующих месячных (день / месяц / год).</li>
+      <li>Дата овуляции.</li>
+      <li>Фертильное окно — даты «от-до».</li>
+      <li>Подсказка: что говорят и делают близкие в эти дни.</li>
+    </ul>
+    <h2 style="margin-top: 14px;">А что НЕ увидит</h2>
+    <ul class="invite-list">
+      <li>Записи из дневника симптомов.</li>
+      <li>Историю чатов с Лирой.</li>
+      <li>Никаких личных данных, кроме твоего имени.</li>
+    </ul>
+  </div>
+
+  <div class="invite-card">
+    <h2>Дополнительно — Telegram-напоминания</h2>
+    <p>
+      Если партнёр откроет вторую ссылку (для Telegram), бот сам отправит
+      ему два коротких напоминания каждый месяц:
+    </p>
+    <ul class="invite-list">
+      <li><b>За 3 дня</b> до начала: «скоро ПМС, побольше заботы».</li>
+      <li><b>В день начала</b>: «сегодня день 1, тёплый чай и поддержка».</li>
+    </ul>
+    <p style="margin-top: 12px;">
+      Это бесплатно и не зависит от подписки. Чтобы отключить — попроси
+      партнёра удалить чат с ботом или нажми «Сбросить приглашение» ниже
+      (после этого его старая ссылка перестанет работать).
+    </p>
+  </div>
+
+</main>
+
+<script>
+"use strict";
+
+function readCycleCode() {
+  const keys = [
+    "lira.cycleCode",
+    "cycleCode",
+    "lira:cycleCode",
+    "lira_cycle_code",
+  ];
+  for (const k of keys) {
+    try {
+      const v = (localStorage.getItem(k) || "").trim();
+      if (v && /^[0-9A-Z-]{6,16}$/i.test(v)) {
+        return v.toUpperCase();
+      }
+    } catch (_e) {}
+  }
+  return null;
+}
+
+const $ = (id) => document.getElementById(id);
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[c]);
+}
+
+function renderNoCode() {
+  $("invite-host").innerHTML =
+    '<div class="no-code"><b>Не нашли твой цикл-код.</b><br>' +
+    'Приглашение партнёра связано с твоим профилем в Lira через локальный код. ' +
+    'Открой <a href="/">приложение Lira</a>, заполни первую анкету — после этого ' +
+    'код появится автоматически.<br>' +
+    '<button id="cc-manual" type="button">Ввести код вручную</button></div>';
+  $("cc-manual").addEventListener("click", () => {
+    const code = (prompt("Введи свой cycle-code (8 символов в формате XXXX-XXXX):") || "").trim();
+    if (!code) return;
+    try { localStorage.setItem("lira.cycleCode", code.toUpperCase()); } catch (_e) {}
+    init();
+  });
+}
+
+function renderUnpaired(message) {
+  $("invite-host").innerHTML =
+    '<div class="no-code"><b>Нужно сначала привязать Telegram</b><br>' +
+    escapeHtml(message) +
+    '<br><a class="home" style="display:inline-block; margin-top:10px;" href="/">Открыть Lira</a></div>';
+}
+
+function renderError(message) {
+  $("invite-host").innerHTML =
+    '<div class="no-code"><b>Не получилось.</b><br>' +
+    escapeHtml(message) +
+    '<br><button id="retry" type="button">Попробовать ещё раз</button></div>';
+  $("retry").addEventListener("click", init);
+}
+
+function renderInvite(token, shareUrl, botDeeplink) {
+  const safeShare = escapeHtml(shareUrl);
+  const safeBot = escapeHtml(botDeeplink);
+  $("invite-host").innerHTML = `
+    <div class="invite-card">
+      <h2>1. Ссылка с прогнозом (без Telegram)</h2>
+      <p>Отправь её партнёру в любой мессенджер. Он увидит даты следующих
+      месячных и подсказку, как тебя поддержать.</p>
+      <div class="invite-link">
+        <input id="share-url" readonly value="${safeShare}">
+        <button id="copy-share" type="button">Скопировать</button>
+      </div>
+      <div class="invite-status" id="share-status"></div>
+    </div>
+    <div class="invite-card">
+      <h2>2. Ссылка для Telegram-напоминаний (необязательно)</h2>
+      <p>Если партнёр откроет эту ссылку, бот добавит его в чат и пришлёт
+      два напоминания за цикл («скоро ПМС» и «день 1»).</p>
+      <div class="invite-link">
+        <input id="bot-url" readonly value="${safeBot}">
+        <button id="copy-bot" type="button">Скопировать</button>
+        <button id="open-bot" type="button" class="secondary">Открыть в Telegram</button>
+      </div>
+      <div class="invite-status" id="bot-status"></div>
+    </div>
+    <div class="invite-card">
+      <h2>Сбросить приглашение</h2>
+      <p>После сброса прежняя ссылка перестанет работать, а партнёр в
+      Telegram отвяжется. Это нужно, если ты разошлась с человеком или
+      потеряла контроль над ссылкой.</p>
+      <button id="reset-token" type="button" class="invite-cta" style="background:#9F4830;">
+        Сбросить и сгенерировать новую
+      </button>
+    </div>
+  `;
+  $("copy-share").addEventListener("click", () => copy("share-url", "share-status"));
+  $("copy-bot").addEventListener("click", () => copy("bot-url", "bot-status"));
+  $("open-bot").addEventListener("click", () => {
+    window.open(botDeeplink, "_blank", "noopener");
+  });
+  $("reset-token").addEventListener("click", async () => {
+    if (!confirm("Точно сбросить? Старая ссылка сразу перестанет работать.")) return;
+    // We don't yet have a "rotate" endpoint server-side; for v1 we just
+    // create a brand-new token by calling /partner/invite again (the
+    // server overwrites the prior token on the user record via UPDATE).
+    // TODO(v2): add /v1/lira/partner/revoke for a clean rotate-and-unbind.
+    await init();
+  });
+}
+
+async function copy(srcId, statusId) {
+  const v = $(srcId).value;
+  try {
+    await navigator.clipboard.writeText(v);
+    $(statusId).textContent = "Скопировано в буфер обмена ✓";
+    $(statusId).className = "invite-status ok";
+  } catch (_e) {
+    $(srcId).select();
+    document.execCommand("copy");
+    $(statusId).textContent = "Скопировано ✓";
+    $(statusId).className = "invite-status ok";
+  }
+  setTimeout(() => { $(statusId).textContent = ""; $(statusId).className = "invite-status"; }, 3000);
+}
+
+async function init() {
+  const cycleCode = readCycleCode();
+  if (!cycleCode) {
+    renderNoCode();
+    return;
+  }
+  const baseUrl = location.origin;
+  try {
+    const r = await fetch("/v1/lira/partner/invite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cycle_code: cycleCode, public_base_url: baseUrl }),
+    });
+    const j = await r.json();
+    if (!r.ok || !j.ok) {
+      if (j.error) {
+        renderUnpaired(j.error);
+      } else {
+        renderError("Сервер ответил кодом " + r.status);
+      }
+      return;
+    }
+    renderInvite(j.token, j.share_url, j.bot_deeplink);
+  } catch (e) {
+    renderError("Не удалось связаться с сервером. " + (e.message || ""));
+  }
+}
+
+init();
+</script>
+</body>
+</html>

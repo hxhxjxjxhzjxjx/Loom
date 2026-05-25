@@ -1,6 +1,6 @@
 // Lira service worker — кэширует статику приложения, чтобы оно
 // открывалось даже при медленной сети. API-запросы НИКОГДА не кешируются.
-const CACHE = 'lira-v1';
+const CACHE = 'lira-v3-share';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.ico',
   '/icons/icon-192.png', '/icons/icon-512.png'];
 

@@ -131,8 +131,8 @@
     <button id="lira-legal-btn" type="button" aria-label="Правовая информация">ⓘ</button>
     <div id="lira-legal-sheet" role="dialog" aria-modal="true" aria-label="Правовая информация">
       <div class="lira-legal-card">
-        <p class="lira-legal-title">Правовая информация</p>
-        <p class="lira-legal-sub">По вопросам подписки, возвратов и данных</p>
+        <p class="lira-legal-title">Меню Lira</p>
+        <p class="lira-legal-sub">Возможности и правовая информация</p>
         <a class="lira-legal-row" href="/legal/about.html" target="_blank" rel="noopener"><span>🌸 О сервисе</span><span class="arr">›</span></a>
         <a class="lira-legal-row" href="/legal/privacy.html" target="_blank" rel="noopener"><span>🔒 Политика конфиденциальности</span><span class="arr">›</span></a>
         <a class="lira-legal-row" href="/legal/offer.html" target="_blank" rel="noopener"><span>📄 Договор-оферта</span><span class="arr">›</span></a>
@@ -226,6 +226,386 @@
 })();
 </script>
 <!-- LIRA_GEAR_INJECTED -->
+
+<!-- LIRA_SHARE_INJECTED — top-right share button + modal.
+     Lets the user share her cycle with a partner (read-only URL) or
+     save it as PDF. Checkboxes gate «diary + graphs» behind an active
+     subscription. -->
+<style id="lira-share-style">
+  #lira-share{position:fixed;top:max(env(safe-area-inset-top,0px),12px);right:108px;width:36px;height:36px;border-radius:18px;background:rgba(255,252,247,0.92);border:1px solid #EADBC4;display:flex;align-items:center;justify-content:center;z-index:9998;cursor:pointer;color:#7E5A3A;box-shadow:0 4px 14px rgba(142,111,88,0.18);transition:transform 0.15s ease}
+  #lira-share:hover{transform:scale(1.05)}
+  #lira-share svg{width:18px;height:18px}
+  @media(min-width:700px){#lira-share{position:absolute;top:32px;right:calc(50% - 106px)}}
+  #lira-share-sheet{position:fixed;inset:0;z-index:11000;background:rgba(58,42,30,0.45);display:none;align-items:flex-end;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  #lira-share-sheet.visible{display:flex}
+  .lira-share-card{width:100%;max-width:440px;background:#FFFCF7;border-radius:24px 24px 0 0;padding:22px 22px calc(20px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 30px rgba(58,42,30,0.18);display:flex;flex-direction:column;gap:14px;animation:lira-legal-up 0.22s ease;max-height:88vh;overflow-y:auto}
+  @media(min-width:700px){#lira-share-sheet{align-items:center}.lira-share-card{border-radius:24px;max-width:420px}}
+  .lira-share-title{font-size:17px;font-weight:600;color:#3D2C1E;margin:0;text-align:center}
+  .lira-share-sub{font-size:12px;color:#8E7156;margin:-8px 0 4px;text-align:center;line-height:1.5}
+  .lira-share-section{display:flex;flex-direction:column;gap:6px}
+  .lira-share-section h4{margin:0;font-size:13px;font-weight:600;color:#8E7156;text-transform:uppercase;letter-spacing:0.06em}
+  .lira-share-opt{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #EADBC4;background:#FBF3E6;border-radius:14px;cursor:pointer;font-size:14px;color:#3D2C1E;line-height:1.4;user-select:none}
+  .lira-share-opt input{width:18px;height:18px;accent-color:#B97A57;flex-shrink:0}
+  .lira-share-opt .lock{margin-left:auto;font-size:12px;color:#B97A57;font-weight:500;flex-shrink:0}
+  .lira-share-opt.locked{opacity:0.55;cursor:not-allowed;background:#F2E4CC}
+  .lira-share-opt.locked input{pointer-events:none}
+  .lira-share-paywall{background:linear-gradient(135deg,#FBE9D2 0%,#F4D9B5 100%);border:1px solid #E5C29B;border-radius:14px;padding:12px 14px;font-size:13px;color:#7A4A23;line-height:1.5}
+  .lira-share-paywall a{color:#7A2E5A;text-decoration:underline;font-weight:600}
+  .lira-share-status{font-size:13px;color:#8E7156;min-height:18px;text-align:center;line-height:1.4}
+  .lira-share-status.error{color:#B13D3D}
+  .lira-share-status.ok{color:#4F8A3A}
+  .lira-share-actions{display:flex;flex-direction:column;gap:10px}
+  .lira-share-btn{height:46px;border-radius:23px;border:none;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
+  .lira-share-btn.primary{background:#B97A57;color:#fff}
+  .lira-share-btn.primary:hover{background:#A66946}
+  .lira-share-btn.secondary{background:transparent;color:#7E5A3A;border:1px solid #B97A57}
+  .lira-share-btn.secondary:hover{background:#FBF3E6}
+  .lira-share-btn[disabled]{opacity:0.55;cursor:not-allowed}
+  .lira-share-close{height:42px;border-radius:21px;border:none;background:#EADBC4;color:#5C4733;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+  .lira-share-link{font-size:12px;color:#7E5A3A;background:#FFF;border:1px solid #EADBC4;border-radius:10px;padding:8px 10px;word-break:break-all;text-align:left;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+</style>
+<button id="lira-share" aria-label="Поделиться" type="button">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="18" cy="5" r="3"></circle>
+    <circle cx="6" cy="12" r="3"></circle>
+    <circle cx="18" cy="19" r="3"></circle>
+    <line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line>
+    <line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line>
+  </svg>
+</button>
+<div id="lira-share-sheet" role="dialog" aria-modal="true" aria-label="Поделиться циклом">
+  <div class="lira-share-card">
+    <p class="lira-share-title">Поделиться циклом</p>
+    <p class="lira-share-sub">Отправь партнёру читаемую ссылку или сохрани PDF.</p>
+
+    <div class="lira-share-section">
+      <h4>Что включить</h4>
+      <label class="lira-share-opt" data-tier="free">
+        <input type="checkbox" id="lira-opt-calendar" checked>
+        <span>📅 Календарь цикла и прогноз</span>
+      </label>
+      <label class="lira-share-opt" data-tier="free">
+        <input type="checkbox" id="lira-opt-phase" checked>
+        <span>🌙 Текущая фаза и совет для партнёра</span>
+      </label>
+      <label class="lira-share-opt" id="lira-opt-symptoms-row" data-tier="paid">
+        <input type="checkbox" id="lira-opt-symptoms">
+        <span>📊 Симптомы и графики трендов</span>
+        <span class="lock" id="lira-opt-symptoms-lock">🔒 Premium</span>
+      </label>
+      <label class="lira-share-opt" id="lira-opt-notes-row" data-tier="paid">
+        <input type="checkbox" id="lira-opt-notes">
+        <span>📝 Заметки из дневника</span>
+        <span class="lock" id="lira-opt-notes-lock">🔒 Premium</span>
+      </label>
+    </div>
+
+    <div class="lira-share-paywall" id="lira-share-paywall" hidden>
+      🔒 <b>Симптомы и графики</b> — доступны в подписке Premium / Basic / VIP.
+      <a href="#" id="lira-share-paywall-link">Открыть подписку »</a>
+    </div>
+
+    <div class="lira-share-status" id="lira-share-status"></div>
+    <div class="lira-share-link" id="lira-share-link" hidden></div>
+
+    <div class="lira-share-actions">
+      <button class="lira-share-btn primary" id="lira-share-partner" type="button">
+        <span>💕</span> Поделиться с партнёром
+      </button>
+      <button class="lira-share-btn secondary" id="lira-share-pdf" type="button">
+        <span>📄</span> Создать PDF и отправить
+      </button>
+      <button class="lira-share-close" id="lira-share-close" type="button">Закрыть</button>
+    </div>
+  </div>
+</div>
+<script id="lira-share-script">
+(function(){
+  var SUB_KEY = '@lira/subscription/v1';
+  var DEVICE_KEY = '@lira/sync/device-id/v1';
+  var CYCLE_KEYS = ['lira.cycleCode','cycleCode','lira:cycleCode','lira_cycle_code'];
+
+  var btn = document.getElementById('lira-share');
+  var sheet = document.getElementById('lira-share-sheet');
+  var close = document.getElementById('lira-share-close');
+  if (!btn || !sheet) return;
+
+  function safeRead(k){try{var r=localStorage.getItem(k);return r?JSON.parse(r):null;}catch(_){return null;}}
+  function readDeviceId(){
+    try{var raw=localStorage.getItem(DEVICE_KEY); if(typeof raw==='string'&&raw.length>=6) return raw;}catch(_){}
+    // Diary may have set a paired cycle code on a separate key
+    for(var i=0;i<CYCLE_KEYS.length;i++){
+      try{var v=(localStorage.getItem(CYCLE_KEYS[i])||'').trim(); if(v && v.length>=4) return v;}catch(_){}
+    }
+    // Fallback: synthesise one and persist
+    var rnd='web-'+Math.random().toString(36).slice(2,10)+'-'+Date.now().toString(36);
+    try{localStorage.setItem(DEVICE_KEY,rnd);}catch(_){}
+    return rnd;
+  }
+  function hasActiveSubscription(){
+    var sub = safeRead(SUB_KEY); if(!sub) return false;
+    if(sub.cancelled) return false;
+    var renew = sub.renewsAt || sub.renews_at || sub.activeUntil;
+    if(renew){var t=Date.parse(renew); if(!isNaN(t) && t<Date.now()) return false;}
+    if(sub.tier === 'free' || sub.tier === null) return false;
+    return !!(sub.valid || sub.active || sub.tier);
+  }
+  function setStatus(msg, kind){
+    var el = document.getElementById('lira-share-status');
+    if(!el) return;
+    el.textContent = msg || '';
+    el.className = 'lira-share-status' + (kind ? ' '+kind : '');
+  }
+  function showLink(url){
+    var el = document.getElementById('lira-share-link');
+    if(!el) return;
+    if(!url){el.hidden=true; el.textContent=''; return;}
+    el.hidden=false; el.textContent=url;
+  }
+
+  function updatePaywall(){
+    var paid = hasActiveSubscription();
+    var rows = sheet.querySelectorAll('.lira-share-opt[data-tier="paid"]');
+    for(var i=0;i<rows.length;i++){
+      var row=rows[i]; var input=row.querySelector('input[type="checkbox"]');
+      var lock=row.querySelector('.lock');
+      if(paid){
+        row.classList.remove('locked');
+        if(input) input.disabled=false;
+        if(lock) lock.textContent='Premium';
+      } else {
+        row.classList.add('locked');
+        if(input){input.checked=false; input.disabled=true;}
+        if(lock) lock.textContent='🔒 Premium';
+      }
+    }
+    var pw = document.getElementById('lira-share-paywall');
+    if(pw) pw.hidden = paid;
+  }
+
+  function selectedParts(){
+    var parts = [];
+    if(document.getElementById('lira-opt-calendar').checked) parts.push('calendar');
+    if(document.getElementById('lira-opt-phase').checked)    parts.push('phase');
+    if(document.getElementById('lira-opt-symptoms').checked) parts.push('symptoms');
+    if(document.getElementById('lira-opt-notes').checked)    parts.push('notes');
+    return parts;
+  }
+
+  function open(){updatePaywall(); setStatus(''); showLink(null); sheet.classList.add('visible');}
+  function shut(){sheet.classList.remove('visible');}
+  btn.addEventListener('click', open);
+  close && close.addEventListener('click', shut);
+  sheet.addEventListener('click', function(e){ if(e.target===sheet) shut(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') shut(); });
+
+  // Paywall link — open Subscription tab.
+  var pwLink = document.getElementById('lira-share-paywall-link');
+  pwLink && pwLink.addEventListener('click', function(e){
+    e.preventDefault();
+    shut();
+    // Try to navigate via tab DOM, fall back to URL.
+    var tabs = document.querySelectorAll('[role="tab"]');
+    for(var i=0;i<tabs.length;i++){
+      var t=tabs[i];
+      var lbl=((t.getAttribute('aria-label')||'')+' '+(t.getAttribute('href')||'')).toLowerCase();
+      if(lbl.indexOf('subscription')>-1||lbl.indexOf('подпис')>-1||lbl.indexOf('plan')>-1){ t.click(); return; }
+    }
+    location.href = '/Tabs/Subscription';
+  });
+
+  // —— Partner share ——
+  document.getElementById('lira-share-partner').addEventListener('click', async function(){
+    var bt = this; if(bt.disabled) return; bt.disabled=true;
+    setStatus('Готовлю ссылку…');
+    showLink(null);
+    var key = readDeviceId();
+    var resp = null;
+    try{
+      resp = await fetch('/v1/lira/partner/invite', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({cycle_code: key, public_base_url: location.origin}),
+        cache: 'no-store',
+        credentials: 'same-origin'
+      });
+    }catch(e){
+      setStatus('Сеть недоступна (' + (e && e.message ? e.message : 'fetch failed') + ').', 'error');
+      bt.disabled=false; return;
+    }
+    var rawText = '';
+    try{ rawText = await resp.text(); }catch(_){ rawText=''; }
+    var j = null;
+    try{ j = rawText ? JSON.parse(rawText) : null; }catch(_){ j = null; }
+    if(!resp.ok){
+      var detail = (j && (j.error || j.detail)) || (rawText && rawText.slice(0,80)) || ('HTTP '+resp.status);
+      setStatus('Сервер: ' + detail, 'error');
+      bt.disabled=false; return;
+    }
+    if(!j || !j.ok){
+      setStatus((j && j.error) || 'Не удалось создать ссылку', 'error');
+      bt.disabled=false; return;
+    }
+    try{
+      var url = j.share_url;
+      var parts = selectedParts();
+      if(parts.length) url = url + '#include=' + encodeURIComponent(parts.join(','));
+      showLink(url);
+      if(navigator.share){
+        try{
+          await navigator.share({title:'Мой цикл — Lira', text:'Читаемая ссылка для партнёра', url:url});
+          setStatus('Ссылка отправлена', 'ok');
+          return;
+        }catch(_){}
+      }
+      try{
+        await navigator.clipboard.writeText(url);
+        setStatus('Ссылка скопирована в буфер — вставь в любом мессенджере.', 'ok');
+      }catch(_){
+        setStatus('Скопируй ссылку выше', 'ok');
+      }
+    } finally { bt.disabled=false; }
+  });
+
+  // —— PDF + share ——
+  document.getElementById('lira-share-pdf').addEventListener('click', function(){
+    var key = readDeviceId();
+    var parts = selectedParts();
+    var url = '/share-pdf.html?cycle=' + encodeURIComponent(key) + '&parts=' + encodeURIComponent(parts.join(','));
+    // Open in a new tab — the page auto-triggers print + native share.
+    window.open(url, '_blank', 'noopener');
+    setStatus('Открываю PDF…', 'ok');
+  });
+
+  // Show only on tabs other than Settings.
+  function findSettingsTab(){
+    var tabs=document.querySelectorAll('[role="tab"]');
+    for(var i=0;i<tabs.length;i++){
+      var t=tabs[i];
+      var lbl=((t.getAttribute('aria-label')||'')+' '+(t.getAttribute('href')||'')).toLowerCase();
+      if(lbl.indexOf('settings')>-1||lbl.indexOf('настр')>-1) return t;
+    }
+    return null;
+  }
+  function update(){
+    var t=findSettingsTab();
+    btn.style.display = (t && t.getAttribute('aria-selected')==='true') ? 'none' : 'flex';
+  }
+  window.addEventListener('lira:nav', update);
+  document.addEventListener('click', function(){setTimeout(update,30);}, true);
+  var tries=0; var iv=setInterval(function(){tries++; update(); if(tries>40) clearInterval(iv);}, 250);
+})();
+</script>
+<!-- LIRA_SHARE_END -->
+
+<!-- LIRA_STATS_INJECT — DOM observer that injects a "Дневник симптомов"
+     card into the Statistics tab. The compiled RN bundle owns the tab's
+     React tree; we only append a sibling element + open /diary.html on
+     click (which is paywalled separately). -->
+<style id="lira-stats-style">
+  #lira-stats-card{
+    background:#FFFCF7;border:1px solid #EADBC4;border-radius:18px;
+    padding:18px 18px;margin:14px 16px;
+    box-shadow:0 4px 14px rgba(142,111,88,0.08);
+    display:flex;align-items:center;gap:14px;
+    cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  #lira-stats-card:hover{background:#FBF3E6}
+  #lira-stats-card .ico{
+    width:48px;height:48px;border-radius:24px;
+    background:linear-gradient(135deg,#FBE9D2 0%,#F4D9B5 100%);
+    display:flex;align-items:center;justify-content:center;
+    font-size:24px;flex-shrink:0;
+  }
+  #lira-stats-card .body{flex:1;min-width:0}
+  #lira-stats-card .title{font-size:15px;font-weight:600;color:#3D2C1E;margin:0 0 2px}
+  #lira-stats-card .sub{font-size:12px;color:#8E7156;margin:0;line-height:1.4}
+  #lira-stats-card .arr{color:#B97A57;font-size:20px;flex-shrink:0}
+  #lira-stats-card .lock{
+    margin-left:6px;font-size:11px;color:#7A2E5A;font-weight:600;
+    background:#FBE9D2;border:1px solid #E5C29B;border-radius:8px;padding:2px 6px;
+  }
+</style>
+<script id="lira-stats-script">
+(function(){
+  var SUB_KEY = '@lira/subscription/v1';
+  function safeRead(k){try{var r=localStorage.getItem(k);return r?JSON.parse(r):null;}catch(_){return null;}}
+  function hasActiveSubscription(){
+    var sub = safeRead(SUB_KEY); if(!sub) return false;
+    if(sub.cancelled) return false;
+    var renew = sub.renewsAt || sub.renews_at || sub.activeUntil;
+    if(renew){var t=Date.parse(renew); if(!isNaN(t) && t<Date.now()) return false;}
+    if(sub.tier === 'free' || sub.tier === null) return false;
+    return !!(sub.valid || sub.active || sub.tier);
+  }
+  function isOnStatsTab(){
+    var tabs=document.querySelectorAll('[role="tab"]');
+    for(var i=0;i<tabs.length;i++){
+      var t=tabs[i];
+      var lbl=((t.getAttribute('aria-label')||'')+' '+(t.getAttribute('href')||'')).toLowerCase();
+      // Match "Статистика" + "Stats" routes. Skip "Аналитика" (=Analytics) so we don't fight that screen.
+      var isStats = (lbl.indexOf('stat')>-1 && lbl.indexOf('settings')===-1) || lbl.indexOf('статистик')>-1;
+      if(isStats && t.getAttribute('aria-selected')==='true') return true;
+    }
+    return false;
+  }
+  function buildCard(){
+    var card = document.getElementById('lira-stats-card');
+    if(card) return card;
+    card = document.createElement('div');
+    card.id = 'lira-stats-card';
+    card.setAttribute('role','button');
+    card.setAttribute('tabindex','0');
+    var paid = hasActiveSubscription();
+    card.innerHTML =
+      '<div class="ico">📊</div>'+
+      '<div class="body">'+
+        '<p class="title">Дневник симптомов'+(paid?'':'<span class="lock">🔒 Premium</span>')+'</p>'+
+        '<p class="sub">'+(paid
+          ? 'Графики за 14 / 30 / 90 дней. 10 параметров: спазмы, сон, энергия, тревога…'
+          : 'Открывается с подпиской. Графики трендов + экспорт в PDF.')+'</p>'+
+      '</div>'+
+      '<span class="arr">›</span>';
+    card.addEventListener('click', function(){
+      window.location.href = '/diary.html';
+    });
+    card.addEventListener('keydown', function(e){
+      if(e.key==='Enter' || e.key===' '){ e.preventDefault(); window.location.href = '/diary.html'; }
+    });
+    return card;
+  }
+  function update(){
+    var existing = document.getElementById('lira-stats-card');
+    if(!isOnStatsTab()){
+      if(existing) existing.remove();
+      return;
+    }
+    if(existing) return;
+    // Find the Stats tab's scroll container — RN-Web uses a scrollable
+    // div with role/aria-* attributes inside #root.
+    var root = document.getElementById('root');
+    if(!root) return;
+    // Pick the visible scrollable region that's NOT the tablist itself.
+    var candidates = root.querySelectorAll('[style*="overflow"]');
+    var host = null;
+    for(var i=0;i<candidates.length;i++){
+      var el = candidates[i];
+      var role = el.getAttribute('role') || '';
+      if(role === 'tablist' || role === 'tab') continue;
+      var r = el.getBoundingClientRect();
+      if(r.width > 200 && r.height > 200) { host = el; break; }
+    }
+    if(!host) host = root;
+    host.prepend(buildCard());
+  }
+  // RN-Web swaps the tab content asynchronously — observe + poll.
+  var mo = new MutationObserver(function(){ setTimeout(update, 30); });
+  mo.observe(document.documentElement, {subtree:true, childList:true, attributes:true, attributeFilter:['aria-selected']});
+  window.addEventListener('lira:nav', update);
+  document.addEventListener('click', function(){setTimeout(update,80);}, true);
+  var tries=0; var iv=setInterval(function(){tries++; update(); if(tries>80) clearInterval(iv);}, 250);
+})();
+</script>
+<!-- LIRA_STATS_END -->
 
 <!-- LIRA_KEYBOARD_INJECTED -->
 <script id="lira-keyboard-script">

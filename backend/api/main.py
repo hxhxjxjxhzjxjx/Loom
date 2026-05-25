@@ -25,6 +25,7 @@ from typing import AsyncIterator
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 
 from bot.config import get_settings
 from bot.db import engine, session_scope
@@ -91,6 +92,14 @@ async def _run_bot_polling() -> None:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Retro-fit new columns (partner_token, …) onto existing DBs.
+        from bot.services.schema_upgrade import (
+            ensure_indexes,
+            retrofit_columns,
+        )
+
+        await retrofit_columns(conn)
+        await ensure_indexes(conn)
     settings = get_settings()
     # When the bot runs as a SEPARATE container (docker compose --profile bot)
     # we MUST NOT also poll from the API process — Telegram only allows one
@@ -963,6 +972,451 @@ async def lira_chat(body: _ChatIn, request: Request) -> dict:
         "choices": [{"message": {"role": "assistant", "content": reply}}],
         "online": True,
     }
+
+
+# ---------------------------------------------------------------------- #
+# /v1/lira/diary/* — symptom diary with trend charts                        #
+# ---------------------------------------------------------------------- #
+#
+# Storage is keyed by the device-local ``cycle_code`` so the diary works
+# even for users who haven't paired the app with the Telegram bot. The
+# web bundle never gets to pick the user_id — we look it up server-side
+# from the cycle-code → profile mapping when available.
+
+from bot.services.symptom_diary import (  # noqa: E402
+    ALLOWED_SYMPTOMS,
+    SymptomError,
+    aggregate_for_chart,
+    delete_entry,
+    list_entries,
+    upsert_entry,
+)
+
+
+class _DiaryEntryIn(BaseModel):
+    # Opaque per-device identifier — paired users send the formal
+    # XXXX-XXXX cycle code, web/unpaired clients send their device_id
+    # (``web-<random>-<ts>`` style, ~20 chars). Validation is loose on
+    # purpose: we treat it as an opaque string up to 64 chars.
+    cycle_code: str = Field(..., min_length=4, max_length=64)
+    day: str = Field(..., description="ISO date, e.g. 2026-05-13")
+    symptom: str = Field(..., max_length=48)
+    intensity: int = Field(..., ge=0, le=5)
+    notes: str | None = Field(default=None, max_length=512)
+
+
+class _DiaryEntryOut(BaseModel):
+    ok: bool = True
+    id: int | None = None
+    day: str | None = None
+    symptom: str | None = None
+    intensity: int | None = None
+
+
+class _DiaryAllowedOut(BaseModel):
+    symptoms: list[str]
+
+
+@app.get("/v1/lira/diary/symptoms", response_model=_DiaryAllowedOut)
+async def lira_diary_symptoms() -> _DiaryAllowedOut:
+    """Stable allow-list of symptom keys the diary UI may submit.
+
+    Returned as JSON so the (compiled) web bundle could fetch it; the
+    standalone ``/diary.html`` page hard-codes the same list locally and
+    works fully offline.
+    """
+    return _DiaryAllowedOut(symptoms=list(ALLOWED_SYMPTOMS))
+
+
+@app.post("/v1/lira/diary/entry", response_model=_DiaryEntryOut)
+async def lira_diary_entry(
+    body: _DiaryEntryIn, request: Request
+) -> _DiaryEntryOut:
+    """Insert or update one (day, symptom) row in the diary."""
+    if not await _rate_ok(
+        "diary-entry", _client_ip(request), per_min=60.0, burst=10.0
+    ):
+        raise HTTPException(status_code=429, detail="rate limited")
+    try:
+        day = _parse_date(body.day)
+    except HTTPException:
+        raise
+    async with session_scope() as session:
+        try:
+            row = await upsert_entry(
+                session,
+                cycle_code=body.cycle_code,
+                day=day,
+                symptom=body.symptom,
+                intensity=body.intensity,
+                notes=body.notes,
+            )
+        except SymptomError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _DiaryEntryOut(
+        ok=True,
+        id=row.id,
+        day=row.day.isoformat(),
+        symptom=row.symptom,
+        intensity=row.intensity,
+    )
+
+
+@app.delete("/v1/lira/diary/entry", response_model=_DiaryEntryOut)
+async def lira_diary_entry_delete(
+    cycle_code: str = Query(..., min_length=4, max_length=64),
+    day: str = Query(...),
+    symptom: str = Query(..., max_length=48),
+) -> _DiaryEntryOut:
+    """Remove one (day, symptom) row from the diary."""
+    try:
+        day_obj = _parse_date(day)
+    except HTTPException:
+        raise
+    async with session_scope() as session:
+        try:
+            removed = await delete_entry(
+                session,
+                cycle_code=cycle_code,
+                day=day_obj,
+                symptom=symptom,
+            )
+        except SymptomError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _DiaryEntryOut(ok=removed > 0)
+
+
+@app.get("/v1/lira/diary")
+async def lira_diary_get(
+    cycle_code: str = Query(..., min_length=4, max_length=64),
+    days_back: int = Query(default=90, ge=1, le=365),
+) -> dict:
+    """Return raw entries + chart-ready aggregation for ``days_back`` days."""
+    async with session_scope() as session:
+        try:
+            rows = await list_entries(
+                session, cycle_code=cycle_code, days_back=days_back
+            )
+        except SymptomError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+    entries = [
+        {
+            "id": r.id,
+            "day": r.day.isoformat(),
+            "symptom": r.symptom,
+            "intensity": r.intensity,
+            "notes": r.notes,
+        }
+        for r in rows
+    ]
+    chart = aggregate_for_chart(rows, days_back=days_back)
+    return {
+        "ok": True,
+        "cycle_code": cycle_code,
+        "days_back": days_back,
+        "entries": entries,
+        "chart": chart,
+    }
+
+
+# ---------------------------------------------------------------------- #
+# /v1/lira/partner/* — share read-only cycle view with partner             #
+# ---------------------------------------------------------------------- #
+#
+# Three pieces:
+#  1. POST /v1/lira/partner/invite  → returns a random partner_token plus
+#     two share URLs (web read-only view, and bot deep-link).
+#  2. GET  /partner/{token}         → renders a public read-only HTML page
+#     showing the user's current cycle + next predicted period.
+#  3. POST /v1/pair/{token}/forecast already lets the web bundle push
+#     forecast data we will reuse for the partner view.
+
+from fastapi.responses import HTMLResponse  # noqa: E402
+
+from bot.services.partners import (  # noqa: E402
+    ensure_partner_token,
+    find_user_by_partner_token,
+    partner_bot_deeplink,
+    partner_share_url,
+)
+
+
+class _PartnerInviteIn(BaseModel):
+    # See _DiaryEntryIn — opaque per-device key (cycle_code OR device_id).
+    cycle_code: str = Field(..., min_length=4, max_length=64)
+    public_base_url: str | None = Field(default=None, max_length=256)
+
+
+class _PartnerInviteOut(BaseModel):
+    ok: bool
+    token: str | None = None
+    share_url: str | None = None
+    bot_deeplink: str | None = None
+    error: str | None = None
+
+
+@app.post("/v1/lira/partner/invite", response_model=_PartnerInviteOut)
+async def lira_partner_invite(
+    body: _PartnerInviteIn, request: Request
+) -> _PartnerInviteOut:
+    """Create-or-fetch a partner read-only token for the user identified
+    by ``cycle_code``.
+
+    The token is stable per user: calling the endpoint twice with the
+    same code returns the same token. The user must have paired with
+    Telegram at least once (so we can find a User row from the
+    cycle-code → profile lookup); otherwise we return an explanatory
+    error and ask them to pair first.
+    """
+    if not await _rate_ok(
+        "partner-invite", _client_ip(request), per_min=12.0, burst=4.0
+    ):
+        raise HTTPException(status_code=429, detail="rate limited")
+    sub = await asyncio.shield(_partner_lookup(body.cycle_code))
+    if sub is None:
+        return _PartnerInviteOut(
+            ok=False,
+            error=(
+                "Сначала подключите Telegram — раздел «Лира» в приложении, "
+                "кнопка «Привязать Telegram». После привязки приглашение "
+                "партнёра сгенерируется автоматически."
+            ),
+        )
+    user_id, telegram_id = sub
+    async with session_scope() as session:
+        user = await session.get(User, user_id)
+        if user is None:
+            return _PartnerInviteOut(ok=False, error="user not found")
+        token = await ensure_partner_token(session, user)
+
+    base_url = (body.public_base_url or "").strip()
+    if not base_url:
+        base_url = str(request.base_url).rstrip("/")
+    settings = get_settings()
+    return _PartnerInviteOut(
+        ok=True,
+        token=token,
+        share_url=partner_share_url(base_url, token),
+        bot_deeplink=partner_bot_deeplink(settings.bot_username or "", token),
+    )
+
+
+async def _partner_lookup(cycle_code: str) -> tuple[int, int] | None:
+    """Look up (user_id, telegram_id) by cycle_code via the existing
+    profile-cycle-code index. Returns None if no user is paired yet."""
+    sub = None
+    async with session_scope() as session:
+        sub = await find_active_subscription_by_cycle_code(session, cycle_code)
+        if sub is not None:
+            user = await session.get(User, sub.user_id)
+            if user is not None:
+                return user.id, user.telegram_id
+        # Even without a subscription, the user might have a profile
+        # bound to this cycle_code (paired but never paid). Fall through.
+        canonical = canonicalise_cycle_code(cycle_code)
+        if canonical is None:
+            return None
+        from bot.models import Profile as _Profile
+
+        stmt = select(_Profile).where(_Profile.cycle_sync_code == canonical)
+        prof = (await session.execute(stmt)).scalar_one_or_none()
+        if prof is None:
+            return None
+        user = await session.get(User, prof.user_id)
+        if user is None:
+            return None
+        return user.id, user.telegram_id
+
+
+@app.get("/partner/{token}", response_class=HTMLResponse)
+async def partner_page(token: str) -> HTMLResponse:
+    """Render the read-only HTML view of the cycle that goes with ``token``.
+
+    Anyone with the token can open this page (no auth) — that's the whole
+    point of the "share with partner" feature. We expose ONLY the
+    information needed for a partner to know what to expect (current
+    phase, next predicted period date) — no symptoms, no chat history,
+    no payment info.
+    """
+    if not token or len(token) > 64:
+        raise HTTPException(status_code=400, detail="invalid token")
+    async with session_scope() as session:
+        user = await find_user_by_partner_token(session, token)
+        if user is None:
+            html = _PARTNER_HTML_NOT_FOUND
+            return HTMLResponse(html, status_code=404)
+        name = (user.first_name or user.partner_name or "она").strip()
+        from bot.services.forecasts import latest_user_forecast
+
+        forecast = await latest_user_forecast(session, user)
+    html = _render_partner_html(name=name, forecast=forecast)
+    return HTMLResponse(html, status_code=200)
+
+
+_PARTNER_HTML_NOT_FOUND = """<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Лира · приглашение не найдено</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/legal/style.css">
+</head>
+<body>
+<header class="lira-header">
+  <a class="brand" href="/">🌸 Lira · Партнёр</a>
+  <span class="spacer"></span>
+</header>
+<main class="lira-main">
+  <h1 class="lira-title">Приглашение не найдено</h1>
+  <p>Похоже, ссылка устарела или была отозвана. Попроси новую ссылку у того,
+  кто её прислал.</p>
+  <p><a href="/">Открыть Лиру</a></p>
+</main>
+</body>
+</html>
+"""
+
+
+def _render_partner_html(*, name: str, forecast) -> str:  # noqa: ANN001
+    """Build the HTML for the partner view. Pure-Python templating
+    (no Jinja dependency to keep the deploy slim)."""
+    safe_name = _safe(name)
+    if forecast is None or not forecast:
+        body_html = (
+            "<div class='partner-card partner-empty'>"
+            "<p>Пока нет данных о цикле. "
+            "Партнёрша ещё не загрузила свой прогноз — попроси её открыть "
+            "приложение Lira и нажать «Поделиться с партнёром» ещё раз.</p>"
+            "</div>"
+        )
+    else:
+        first = forecast[0]
+        next_period = first.cycle_start
+        period_end = first.period_end
+        ovulation = first.ovulation
+        fertile_a = first.fertile_start
+        fertile_b = first.fertile_end
+        days_to = (next_period - _date.today()).days
+        if days_to < 0:
+            countdown = (
+                f"<b>Месячные идут</b> "
+                f"<span class='partner-muted'>(начались {next_period:%d.%m})</span>"
+            )
+            tip = (
+                "<p class='partner-tip'>Сейчас ей особенно нужна теплота и поддержка. "
+                "Тёплый чай, объятия, минимум «решать большие задачи прямо сейчас».</p>"
+            )
+        elif days_to <= 3:
+            countdown = (
+                f"<b>Месячные через {days_to} {_plural_day(days_to)}</b> "
+                f"<span class='partner-muted'>({next_period:%d.%m})</span>"
+            )
+            tip = (
+                "<p class='partner-tip'>Близится ПМС: настроение может прыгать, "
+                "хочется сладкого и тишины. Тёплый чай, любимый сериал и грелка — "
+                "хороший вечер. Цветы и шоколад — отдельный плюс.</p>"
+            )
+        else:
+            countdown = (
+                f"<b>Следующие месячные через {days_to} {_plural_day(days_to)}</b> "
+                f"<span class='partner-muted'>({next_period:%d.%m})</span>"
+            )
+            tip = ""
+
+        body_html = f"""
+<div class="partner-card">
+  <div class="partner-headline">{countdown}</div>
+  <ul class="partner-list">
+    <li>Месячные: <b>{next_period:%d.%m.%Y}</b> — <b>{period_end:%d.%m.%Y}</b></li>
+    <li>Овуляция: <b>{ovulation:%d.%m.%Y}</b></li>
+    <li>Фертильное окно: <b>{fertile_a:%d.%m.%Y}</b> — <b>{fertile_b:%d.%m.%Y}</b></li>
+  </ul>
+  {tip}
+</div>
+"""
+
+    return f"""<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Лира · цикл {safe_name}</title>
+<meta name="theme-color" content="#7A2E5A">
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/legal/style.css">
+<style>
+  .partner-page {{ max-width: 640px; }}
+  .partner-headline {{
+    font-size: 20px; line-height: 1.35; margin-bottom: 12px;
+    color: var(--text);
+  }}
+  .partner-muted {{ color: var(--muted); font-weight: 400; }}
+  .partner-card {{
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin-top: 16px;
+  }}
+  .partner-list {{ list-style: none; padding: 0; margin: 6px 0 6px; }}
+  .partner-list li {{
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--border);
+    color: var(--text-soft);
+  }}
+  .partner-list li:last-child {{ border-bottom: none; }}
+  .partner-tip {{
+    background: rgba(185, 122, 87, 0.08);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    line-height: 1.55;
+    margin-top: 14px;
+    font-size: 15px;
+    color: var(--text-soft);
+  }}
+  .partner-empty p {{ margin: 0; line-height: 1.55; }}
+  .partner-footer {{
+    text-align: center; font-size: 13px; color: var(--muted);
+    margin-top: 24px; line-height: 1.7;
+  }}
+  .partner-footer a {{ color: var(--link); }}
+</style>
+</head>
+<body>
+<header class="lira-header">
+  <a class="brand" href="/">🌸 Lira · Партнёр</a>
+  <span class="spacer"></span>
+  <a class="home" href="/">В приложение</a>
+</header>
+<main class="lira-main partner-page">
+  <h1 class="lira-title">Цикл {safe_name}</h1>
+  <p>Это закрытый партнёрский view от приложения <b>Lira</b>.
+  Только тот, у кого есть эта ссылка, может посмотреть прогноз —
+  никаких имён, дневника или платежей здесь нет.</p>
+  {body_html}
+  <p class="partner-footer">
+    Lira · трекер женского здоровья.<br>
+    <a href="/">Что это за приложение?</a>
+  </p>
+</main>
+</body>
+</html>
+"""
+
+
+def _plural_day(n: int) -> str:
+    """Russian plural for days: 1 день, 2-4 дня, 5+ дней (and 11-14 = дней)."""
+    n = abs(int(n))
+    if 11 <= (n % 100) <= 14:
+        return "дней"
+    last = n % 10
+    if last == 1:
+        return "день"
+    if 2 <= last <= 4:
+        return "дня"
+    return "дней"
 
 
 # ---------------------------------------------------------------------- #
