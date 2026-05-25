@@ -420,23 +420,36 @@
     setStatus('Готовлю ссылку…');
     showLink(null);
     var key = readDeviceId();
+    var resp = null;
     try{
-      var r = await fetch('/v1/lira/partner/invite', {
+      resp = await fetch('/v1/lira/partner/invite', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({cycle_code: key, public_base_url: location.origin})
+        body: JSON.stringify({cycle_code: key, public_base_url: location.origin}),
+        cache: 'no-store',
+        credentials: 'same-origin'
       });
-      var j = await r.json();
-      if(!j.ok){
-        setStatus(j.error || 'Не удалось создать ссылку', 'error');
-        return;
-      }
+    }catch(e){
+      setStatus('Сеть недоступна (' + (e && e.message ? e.message : 'fetch failed') + ').', 'error');
+      bt.disabled=false; return;
+    }
+    var rawText = '';
+    try{ rawText = await resp.text(); }catch(_){ rawText=''; }
+    var j = null;
+    try{ j = rawText ? JSON.parse(rawText) : null; }catch(_){ j = null; }
+    if(!resp.ok){
+      var detail = (j && (j.error || j.detail)) || (rawText && rawText.slice(0,80)) || ('HTTP '+resp.status);
+      setStatus('Сервер: ' + detail, 'error');
+      bt.disabled=false; return;
+    }
+    if(!j || !j.ok){
+      setStatus((j && j.error) || 'Не удалось создать ссылку', 'error');
+      bt.disabled=false; return;
+    }
+    try{
       var url = j.share_url;
-      // Append selected sections as a hash so the read-only page can
-      // hide/show sections client-side.
       var parts = selectedParts();
       if(parts.length) url = url + '#include=' + encodeURIComponent(parts.join(','));
       showLink(url);
-      // Try the system share sheet; fall back to clipboard.
       if(navigator.share){
         try{
           await navigator.share({title:'Мой цикл — Lira', text:'Читаемая ссылка для партнёра', url:url});
@@ -446,12 +459,10 @@
       }
       try{
         await navigator.clipboard.writeText(url);
-        setStatus('Ссылка скопирована в буфер вставь в любом мессенджере.', 'ok');
+        setStatus('Ссылка скопирована в буфер — вставь в любом мессенджере.', 'ok');
       }catch(_){
         setStatus('Скопируй ссылку выше', 'ok');
       }
-    }catch(e){
-      setStatus('Ошибка сети. Попробуй ещё раз.', 'error');
     } finally { bt.disabled=false; }
   });
 
