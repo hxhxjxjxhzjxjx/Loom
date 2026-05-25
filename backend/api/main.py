@@ -994,7 +994,11 @@ from bot.services.symptom_diary import (  # noqa: E402
 
 
 class _DiaryEntryIn(BaseModel):
-    cycle_code: str = Field(..., min_length=4, max_length=16)
+    # Opaque per-device identifier — paired users send the formal
+    # XXXX-XXXX cycle code, web/unpaired clients send their device_id
+    # (``web-<random>-<ts>`` style, ~20 chars). Validation is loose on
+    # purpose: we treat it as an opaque string up to 64 chars.
+    cycle_code: str = Field(..., min_length=4, max_length=64)
     day: str = Field(..., description="ISO date, e.g. 2026-05-13")
     symptom: str = Field(..., max_length=48)
     intensity: int = Field(..., ge=0, le=5)
@@ -1060,7 +1064,7 @@ async def lira_diary_entry(
 
 @app.delete("/v1/lira/diary/entry", response_model=_DiaryEntryOut)
 async def lira_diary_entry_delete(
-    cycle_code: str = Query(..., min_length=4, max_length=16),
+    cycle_code: str = Query(..., min_length=4, max_length=64),
     day: str = Query(...),
     symptom: str = Query(..., max_length=48),
 ) -> _DiaryEntryOut:
@@ -1084,7 +1088,7 @@ async def lira_diary_entry_delete(
 
 @app.get("/v1/lira/diary")
 async def lira_diary_get(
-    cycle_code: str = Query(..., min_length=4, max_length=16),
+    cycle_code: str = Query(..., min_length=4, max_length=64),
     days_back: int = Query(default=90, ge=1, le=365),
 ) -> dict:
     """Return raw entries + chart-ready aggregation for ``days_back`` days."""
@@ -1138,7 +1142,8 @@ from bot.services.partners import (  # noqa: E402
 
 
 class _PartnerInviteIn(BaseModel):
-    cycle_code: str = Field(..., min_length=4, max_length=16)
+    # See _DiaryEntryIn — opaque per-device key (cycle_code OR device_id).
+    cycle_code: str = Field(..., min_length=4, max_length=64)
     public_base_url: str | None = Field(default=None, max_length=256)
 
 

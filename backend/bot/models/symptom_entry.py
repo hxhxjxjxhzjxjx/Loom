@@ -23,8 +23,10 @@ class SymptomEntry(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    # Device-local cycle code (8-char base32, normalised). Always present.
-    cycle_code: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    # Device-local key — paired users send XXXX-XXXX cycle code, web /
+    # unpaired clients send their device_id (``web-<random>-<ts>``,
+    # ~20 chars). Treated as opaque, up to 64 chars.
+    cycle_code: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     # Optional FK — only set when the user has paired with Telegram.
     user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True

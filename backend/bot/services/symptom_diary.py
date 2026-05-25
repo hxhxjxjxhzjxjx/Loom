@@ -58,9 +58,23 @@ def _validate_symptom(name: str) -> str:
 
 
 def _validate_cycle_code(raw: str) -> str:
-    cleaned = canonicalise_cycle_code(raw)
-    if not cleaned:
+    """Treat the supplied key as opaque.
+
+    Paired users send the canonical ``XXXX-XXXX`` cycle-sync code; web /
+    unpaired clients send their device_id (``web-<random>-<ts>``). We
+    accept any reasonable identifier 4..64 chars long and store it
+    verbatim — the upstream API has already sanity-checked the length.
+    """
+    if not raw:
         raise SymptomError("invalid cycle_code")
+    cleaned = str(raw).strip()
+    if not (4 <= len(cleaned) <= 64):
+        raise SymptomError("invalid cycle_code")
+    # If it looks like a paired-user cycle code, normalise it so the
+    # column index hits the same row regardless of casing/dashes.
+    canonical = canonicalise_cycle_code(cleaned)
+    if canonical is not None:
+        return canonical
     return cleaned
 
 

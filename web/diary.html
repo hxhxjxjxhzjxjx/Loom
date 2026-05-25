@@ -167,6 +167,41 @@
     padding: 8px 16px; border-radius: 18px; cursor: pointer; font-size: 14px;
     margin-top: 8px;
   }
+
+  /* Paywall — shown when there's no active subscription. */
+  .paywall {
+    background: linear-gradient(135deg, #FBE9D2 0%, #F4D9B5 100%);
+    border: 1px solid #E5C29B;
+    border-radius: 18px;
+    padding: 24px 22px;
+    margin: 24px 0 16px;
+    color: #5C3A1F;
+    line-height: 1.55;
+  }
+  .paywall h2 {
+    margin: 0 0 8px;
+    color: #7A4A23;
+    font-size: 22px;
+  }
+  .paywall ul { margin: 8px 0; padding-left: 18px; color: #6B4321; }
+  .paywall ul li { margin: 4px 0; }
+  .paywall .cta {
+    display: inline-block; margin-top: 12px;
+    background: #7A2E5A; color: #fff; text-decoration: none;
+    padding: 12px 24px; border-radius: 24px;
+    font-weight: 600; font-size: 15px;
+  }
+  .paywall .cta:hover { background: #642248; }
+  .paywall .price-row {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin: 12px 0 4px;
+  }
+  .paywall .price-chip {
+    background: #fff; border: 1px solid #E5C29B;
+    border-radius: 14px; padding: 8px 14px;
+    font-size: 13px; color: #5C3A1F;
+  }
+  .paywall .price-chip b { color: #7A2E5A; font-size: 15px; }
 </style>
 </head>
 <body>
@@ -184,6 +219,23 @@
     Отмечай каждый день, как себя чувствуешь. Через 2-3 месяца увидишь
     <b>повторяющиеся узоры</b> — какие симптомы усиливаются перед месячными,
     какие — после овуляции, и что меняется, когда ты спишь меньше или больше.
+  </div>
+
+  <!-- Paywall — visible when there is no active subscription. -->
+  <div id="paywall-block" class="paywall" hidden>
+    <h2>🔒 Дневник открывается с подпиской</h2>
+    <p>Детальный дневник симптомов и графики трендов — возможности подписки Lira.</p>
+    <ul>
+      <li>10 симптомов (спазмы, голова, сон, энергия, тревога и другие).</li>
+      <li>Подробные графики за 14 / 30 / 90 дней.</li>
+      <li>Заметки и экспорт в PDF, отправка партнёру.</li>
+    </ul>
+    <div class="price-row">
+      <span class="price-chip"><b>199</b> ₽ · Premium</span>
+      <span class="price-chip"><b>999</b> ₽ · Basic</span>
+      <span class="price-chip"><b>1999</b> ₽ · VIP</span>
+    </div>
+    <a href="/" class="cta" id="paywall-cta">Оформить подписку »</a>
   </div>
 
   <div id="cycle-code-block"></div>
@@ -261,26 +313,48 @@ const SYMPTOM_LABELS = Object.fromEntries(
   FALLBACK_SYMPTOMS.map(s => [s.key, { label: s.label, emoji: s.emoji }])
 );
 
-// ----- Cycle code: read from localStorage written by the main app. -------- //
-// The compiled web bundle persists a per-device cycle code under
-// "lira.cycleCode" (or "cycleCode" depending on bundle version). We read
-// both and prefer the most recent non-empty value. If neither is set, we
-// show a friendly "set up a cycle first" block.
+// ----- Subscription paywall ----------------------------------------------- //
+// The compiled bundle stores the active plan under '@lira/subscription/v1'.
+// We check tier + renewsAt to decide whether the diary is unlocked.
+const SUB_KEY = "@lira/subscription/v1";
+function safeReadJSON(k) {
+  try {
+    const r = localStorage.getItem(k);
+    return r ? JSON.parse(r) : null;
+  } catch (_e) { return null; }
+}
+function hasActiveSubscription() {
+  const sub = safeReadJSON(SUB_KEY);
+  if (!sub) return false;
+  if (sub.cancelled) return false;
+  const renew = sub.renewsAt || sub.renews_at || sub.activeUntil;
+  if (renew) {
+    const t = Date.parse(renew);
+    if (!isNaN(t) && t < Date.now()) return false;
+  }
+  if (sub.tier === "free" || sub.tier === null) return false;
+  return !!(sub.valid || sub.active || sub.tier);
+}
+
+// ----- Cycle/device key: read from localStorage. -------------------------- //
+// Paired users have a XXXX-XXXX cycle code under 'lira.cycleCode'. Web /
+// unpaired clients have a device_id under '@lira/sync/device-id/v1'. The
+// backend now accepts both formats (treats as opaque ≤4 chars ≤ 64).
+const DEVICE_KEY = "@lira/sync/device-id/v1";
 function readCycleCode() {
-  const keys = [
-    "lira.cycleCode",
-    "cycleCode",
-    "lira:cycleCode",
-    "lira_cycle_code",
-  ];
-  for (const k of keys) {
+  // Prefer formal cycle code if present (paired users).
+  const cycleKeys = ["lira.cycleCode","cycleCode","lira:cycleCode","lira_cycle_code"];
+  for (const k of cycleKeys) {
     try {
       const v = (localStorage.getItem(k) || "").trim();
-      if (v && /^[0-9A-Z-]{6,16}$/i.test(v)) {
-        return v.toUpperCase();
-      }
-    } catch (_e) { /* ignore */ }
+      if (v && /^[0-9A-Z-]{6,16}$/i.test(v)) return v.toUpperCase();
+    } catch (_e) {}
   }
+  // Fall back to device id.
+  try {
+    const dev = (localStorage.getItem(DEVICE_KEY) || "").trim();
+    if (dev && dev.length >= 4) return dev;
+  } catch (_e) {}
   return null;
 }
 
@@ -297,6 +371,14 @@ function setStatus(text, kind) {
 }
 
 function renderCycleCodeBlock() {
+  // Paywall first — if no active subscription, hide the whole diary.
+  if (!hasActiveSubscription()) {
+    $("paywall-block").hidden = false;
+    $("diary-app").hidden = true;
+    $("cycle-code-block").innerHTML = "";
+    return;
+  }
+  $("paywall-block").hidden = true;
   const host = $("cycle-code-block");
   if (cycleCode) {
     host.innerHTML = "";
